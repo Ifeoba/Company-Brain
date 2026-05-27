@@ -1,13 +1,14 @@
 import re
 import shutil
 from pathlib import Path
+from typing import Optional
 
 from builder.scaffolder import templates_path
 
 SLUG_RE = re.compile(r"^[a-z][a-z0-9-]{1,40}[a-z0-9]$")
 
 
-def _validate_slug(slug: str) -> str | None:
+def _validate_slug(slug: str) -> Optional[str]:
     if not SLUG_RE.match(slug):
         return (
             f"Invalid slug '{slug}': use lowercase letters, digits, and hyphens only "
