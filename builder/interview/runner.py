@@ -48,6 +48,8 @@ class InterviewRunner:
         self.model = model
         self._input = input_fn or self._default_input
         self._print = print_fn or print
+        self._company_name = ""
+        self._service_description = ""
 
     @staticmethod
     def _default_input(prompt: str) -> str:
@@ -62,6 +64,8 @@ class InterviewRunner:
         brain_name = self.brain_dir.name[:-6] if self.brain_dir.name.endswith("-brain") else self.brain_dir.name
         self._print(f"\nCompany Brain Builder — Interview Mode")
         self._print(f"Brain: {self.brain_dir}/\n")
+
+        self._collect_context()
 
         completed = 0
         for step in STEPS:
@@ -80,6 +84,21 @@ class InterviewRunner:
         self._print(f"  Done. {completed}/6 steps complete.")
         self._print(f"  Run: companybrain validate {brain_name}")
         self._print(f"  Then load the company-brain-validator skill in Claude for a full content review.")
+
+    # ------------------------------------------------------------------
+    # Context collection
+    # ------------------------------------------------------------------
+
+    def _collect_context(self) -> None:
+        self._print("Before we start, two quick questions to give Claude context.\n")
+
+        self._print("Q: What is the name of your company?\n")
+        self._company_name = self._input("> ").strip()
+        self._print("")
+
+        self._print("Q: In one sentence, what does this agent do?\n")
+        self._service_description = self._input("> ").strip()
+        self._print("")
 
     # ------------------------------------------------------------------
     # Step execution
@@ -161,8 +180,16 @@ class InterviewRunner:
             if answer
         )
 
+        context_lines = ""
+        if self._company_name or self._service_description:
+            context_lines = (
+                f"Company: {self._company_name}\n"
+                f"Service: {self._service_description}\n\n"
+            )
+
         system = _SYSTEM_PROMPT_JSON if json_mode else _SYSTEM_PROMPT
         user = (
+            f"{context_lines}"
             f"Template for {filename}:\n\n{template}\n\n"
             f"---\nUser's answers:\n\n{answers_text}"
         )
