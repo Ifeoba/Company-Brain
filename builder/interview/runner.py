@@ -99,11 +99,11 @@ class InterviewRunner:
 
         wrote_any = False
         for filename in step.files:
-            wrote = self._generate_and_confirm(filename, answers, json_mode=False)
+            wrote = self._generate_and_confirm(filename, answers, json_mode=False, step_number=step.number)
             wrote_any = wrote_any or wrote
 
         for filename in step.json_files:
-            wrote = self._generate_and_confirm(filename, answers, json_mode=True)
+            wrote = self._generate_and_confirm(filename, answers, json_mode=True, step_number=step.number)
             wrote_any = wrote_any or wrote
 
         return wrote_any
@@ -117,7 +117,7 @@ class InterviewRunner:
             self._print("")
         return answers
 
-    def _generate_and_confirm(self, filename: str, answers: dict[str, str], json_mode: bool) -> bool:
+    def _generate_and_confirm(self, filename: str, answers: dict[str, str], json_mode: bool, step_number: int = 1) -> bool:
         """Generate content, show it, ask for confirmation. Returns True if written."""
         self._print(f"Generating {filename}...")
         try:
@@ -141,7 +141,8 @@ class InterviewRunner:
             self._print(f"  Open that file to make edits before continuing.")
             return True
         else:
-            self._print(f"  Skipped. Run the interview again to retry this file.")
+            brain_name = self.brain_dir.name[:-6] if self.brain_dir.name.endswith("-brain") else self.brain_dir.name
+            self._print(f"  Skipped. To retry: companybrain interview {brain_name} --step {step_number}")
             return False
 
     # ------------------------------------------------------------------
