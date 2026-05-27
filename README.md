@@ -92,7 +92,7 @@ Fully-populated example brains live in `examples/`. Each example shows what a co
 
 **[Browse examples →](examples/)**
 
-There are no complete examples yet. See `examples/README.md` for what's planned.
+**[Owomi transaction categorization brain →](examples/owomi-tx-categorization-brain/)** — the canonical reference example. Covers Owomi's CategoryEngine gap cases, Nigerian bank feed patterns (NIP transfers, Remita, payroll), 13 eval cases including 3 hard cases, and 6 defined skills. Proof log needs real entries; all other files are complete.
 
 The existing `company_brain/brains/sample-support-brain/` is a stub — every file is one or two generic lines. It does not represent a real brain.
 
