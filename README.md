@@ -31,8 +31,8 @@ billing-support-brain/
 |---|---|---|
 | **Spec** | Format definition — what a brain folder must contain, file by file | `spec/` |
 | **Examples** | Fully-populated brains showing what done looks like | `examples/` |
-| **Builder** | CLI to scaffold and interview-fill new brains | `builder/` *(planned)* |
-| **Runtime** | Engine to load a brain folder and execute it against real work | `runtime/` *(in progress)* |
+| **Builder** | CLI to scaffold and interview-fill new brains | `builder/` |
+| **Runtime** | Engine to load a brain folder and execute it against real work | `company_brain/runtime/` *(deferred — stub only)* |
 
 The spec and examples are independent of the runtime. You can clone this repo, copy the templates, fill them in by hand, and have a real brain — with or without the runtime running.
 
@@ -58,9 +58,25 @@ companybrain init billing-support
 #   Then: companybrain validate billing-support
 ```
 
-Open each file and fill it in. The templates have instructions inside. Work through them in order — 01 through 06.
+### 3. Fill in the brain with Claude
 
-### 3. Check your progress
+`companybrain interview` walks you through the six steps with questions and uses Claude to generate each file from your answers. It's the fastest path from empty scaffold to complete brain.
+
+> **Requires `ANTHROPIC_API_KEY`** — set it before running:
+> ```bash
+> export ANTHROPIC_API_KEY=sk-ant-...
+> ```
+> Get a key at <https://console.anthropic.com/>. The command exits with instructions if the variable is missing.
+
+```bash
+companybrain interview billing-support
+# Step 1: Service Definition
+# What does this service do? ...
+```
+
+You can also fill in the files by hand — open each one in order (01 through 06) and follow the prompts inside.
+
+### 4. Check your progress
 
 ```bash
 companybrain list
@@ -68,7 +84,7 @@ companybrain list
 # billing-support                in formation    9/9      12
 ```
 
-### 4. Validate structure
+### 5. Validate structure
 
 ```bash
 companybrain validate billing-support
@@ -80,20 +96,6 @@ companybrain validate billing-support
 ```
 
 Exit code 0 when ready, 1 when issues remain — plug into CI.
-
-### 5. Fill in the brain with Claude
-
-`companybrain interview` asks you questions step by step and uses Claude to generate each file.
-
-> **Requires `ANTHROPIC_API_KEY`** — set it before running:
-> ```bash
-> export ANTHROPIC_API_KEY=sk-ant-...
-> ```
-> Get a key at <https://console.anthropic.com/>. The command exits with instructions if the variable is missing.
-
-```bash
-companybrain interview billing-support
-```
 
 ### 6. Validate content (in Claude)
 
@@ -119,9 +121,7 @@ Fully-populated example brains live in `examples/`. Each example shows what a co
 
 **[Browse examples →](examples/)**
 
-**[Owomi transaction categorization brain →](examples/owomi-tx-categorization-brain/)** — the canonical reference example. Covers Owomi's CategoryEngine gap cases, Nigerian bank feed patterns (NIP transfers, Remita, payroll), 13 eval cases including 3 hard cases, and 6 defined skills. Proof log needs real entries; all other files are complete.
-
-The existing `company_brain/brains/sample-support-brain/` is a stub — every file is one or two generic lines. It does not represent a real brain.
+**[Owomi transaction categorization brain →](examples/owomi-tx-categorization-brain/)** — the canonical reference example. Covers Owomi's CategoryEngine gap cases, Nigerian bank feed patterns (NIP transfers, Remita, payroll), 13 eval cases including 3 hard cases, and 6 defined skills.
 
 ---
 
@@ -142,13 +142,9 @@ companybrain list                   # show all brains and their status
 
 ## Runtime
 
-The runtime loads a brain folder and executes it against real work — dispatching skills, enforcing guardrails, routing escalations to humans, and logging traces.
+The runtime will load a brain folder and execute it against real work — dispatching skills, enforcing guardrails, routing escalations to humans, and logging traces.
 
-The runtime is in active development. Current state: stub scaffolding exists in `company_brain/runtime/`. It does not yet load or execute brain files.
-
-```bash
-python run.py   # currently prints placeholder output only
-```
+Current state: deferred. Stub scaffolding exists in `company_brain/runtime/` (engine, executor, runner, logger, workflow state). None of it runs a brain yet. The builder and spec are the active work; the runtime picks up once the brain format is stable.
 
 ---
 
@@ -160,13 +156,13 @@ company-brain/
 │   ├── BRAIN_SPEC.md
 │   ├── schemas/              JSON schemas for structured files
 │   └── templates/            Empty brain files with prompts inside
-├── examples/                 Fully-populated example brains (planned)
-├── builder/                  Scaffolder + interview CLI (planned)
+├── examples/                 Fully-populated example brains
+├── builder/                  Scaffolder + interview CLI (shipped)
 ├── company_brain/
-│   ├── brains/               Brain folders (sample-support-brain is a stub)
-│   ├── runtime/              Runtime engine (in progress)
+│   ├── brains/               Brain folders built with the CLI
+│   ├── runtime/              Runtime engine (deferred — stub only)
 │   └── skills/               Skill spec files used by the builder
-└── docs/                     Additional documentation
+└── docs/                     Architecture and onboarding notes
 ```
 
 ---
