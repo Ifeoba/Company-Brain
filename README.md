@@ -81,7 +81,21 @@ companybrain validate billing-support
 
 Exit code 0 when ready, 1 when issues remain — plug into CI.
 
-### 5. Validate content (in Claude)
+### 5. Fill in the brain with Claude
+
+`companybrain interview` asks you questions step by step and uses Claude to generate each file.
+
+> **Requires `ANTHROPIC_API_KEY`** — set it before running:
+> ```bash
+> export ANTHROPIC_API_KEY=sk-ant-...
+> ```
+> Get a key at <https://console.anthropic.com/>. The command exits with instructions if the variable is missing.
+
+```bash
+companybrain interview billing-support
+```
+
+### 6. Validate content (in Claude)
 
 Load the `company-brain-validator` skill and run it against your brain folder for a full six-dimension readiness report: service definition, knowledge layer, judgment layer, skills, guardrails, and proof.
 
@@ -115,14 +129,14 @@ The existing `company_brain/brains/sample-support-brain/` is a stub — every fi
 
 The builder CLI scaffolds new brains and walks users through the six-step build process with interview-style questions.
 
-**Planned commands:**
 ```bash
 companybrain init <service-name>    # creates a brain folder from templates
 companybrain interview <name>       # guided build — steps 1–6 with question prompts
 companybrain validate <name>        # runs the readiness check
+companybrain list                   # show all brains and their status
 ```
 
-The builder is not yet implemented. See `builder/` for the roadmap.
+`companybrain interview` requires an Anthropic API key (`ANTHROPIC_API_KEY`). The command will exit with setup instructions if it is not set.
 
 ---
 
