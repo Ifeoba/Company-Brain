@@ -47,6 +47,9 @@ def create_app() -> FastAPI:
             if full_path.startswith("api/"):
                 from fastapi import HTTPException
                 raise HTTPException(status_code=404)
+            file_path = static_dir / full_path
+            if file_path.exists() and file_path.is_file():
+                return FileResponse(file_path)
             return FileResponse(static_dir / "index.html")
 
     @app.on_event("startup")
