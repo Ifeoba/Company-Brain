@@ -50,11 +50,10 @@ export default function Settings() {
           <div className="settings-section">
             <h3>
               <Icon name="key" size={14} />
-              AI provider
+              AI assistant
             </h3>
             <div className="desc">
-              Choose which AI model powers your interviews and insights. Your key is
-              encrypted at rest and never leaves your server.
+              Choose which AI powers your interviews and suggestions. Your key is stored securely and only used when you run an AI feature.
             </div>
 
             {user?.has_api_key && (
@@ -129,11 +128,10 @@ export default function Settings() {
           </div>
 
           <div className="settings-section">
-            <h3>Email sender</h3>
+            <h3>Email notifications</h3>
             <div className="desc">
-              Expert questions are sent from this address. Configured at the workspace level via{" "}
-              <code className="mono">RESEND_API_KEY</code> and{" "}
-              <code className="mono">RESEND_FROM_EMAIL</code> environment variables.
+              When you send a question to an expert, it arrives by email from your configured sender address.
+              Ask your workspace admin to set this up, or add a <code className="mono">RESEND_API_KEY</code> to your environment.
             </div>
           </div>
 

@@ -19,11 +19,9 @@ function NewBrainModal({ onClose }: { onClose: () => void }) {
       const brain = await createBrain.mutateAsync({ name: name.trim() });
       navigate(`/brains/${brain.slug}`);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to create brain");
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     }
   }
-
-  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
   return (
     <div className="modal-scrim">
@@ -40,11 +38,6 @@ function NewBrainModal({ onClose }: { onClose: () => void }) {
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
-            {name && (
-              <div className="hint mono" style={{ marginTop: 6, fontSize: 11, color: "var(--dim)" }}>
-                slug: {slug}
-              </div>
-            )}
           </div>
           {error && <div className="error-msg">{error}</div>}
           <div className="footer-row">
@@ -65,8 +58,8 @@ function NewBrainModal({ onClose }: { onClose: () => void }) {
 
 function statusInfo(status: BrainSummary["status"]): { cls: string; label: string } {
   if (status === "ready") return { cls: "ok", label: "Ready" };
-  if (status === "stale") return { cls: "warn", label: "Stale" };
-  return { cls: "info", label: "In formation" };
+  if (status === "stale") return { cls: "warn", label: "Needs update" };
+  return { cls: "info", label: "Building" };
 }
 
 export default function BrainsList() {
@@ -96,7 +89,10 @@ export default function BrainsList() {
 
           {!isLoading && brains.length === 0 ? (
             <div className="bl-empty">
-              <p>No brains yet.</p>
+              <p>You haven't created a brain yet.</p>
+              <p style={{ fontSize: 13, color: "var(--dim)", margin: "-8px 0 16px" }}>
+                A brain captures what a person or team knows — through a short interview.
+              </p>
               <button className="btn btn-primary btn-lg" onClick={() => setShowNew(true)}>
                 <Icon name="plus" size={12} /> Create your first brain
               </button>
@@ -105,9 +101,9 @@ export default function BrainsList() {
             <div className="bl-table">
               <div className="bl-row head">
                 <span>Brain</span>
-                <span>Readiness</span>
+                <span>Completeness</span>
                 <span>Status</span>
-                <span>Updated</span>
+                <span>Last updated</span>
                 <span />
               </div>
               {brains.map((b) => {
@@ -125,7 +121,6 @@ export default function BrainsList() {
                   >
                     <div>
                       <div className="bl-brain-name">{b.name}</div>
-                      <div className="bl-brain-slug">{b.slug}</div>
                     </div>
                     <div className="bl-readiness">
                       <span>{b.readiness_score}</span>
@@ -154,8 +149,7 @@ export default function BrainsList() {
           )}
 
           <div className="bl-footer">
-            Each brain is a folder of 9 files.{" "}
-            <a style={{ color: "var(--text-2)" }}>What's a brain? →</a>
+            Each brain captures someone's knowledge through a structured interview.{" "}
           </div>
         </div>
       </div>

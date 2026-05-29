@@ -212,7 +212,7 @@ export default function WorkspaceMap() {
   async function handleDiscover() {
     const found = await discover.mutateAsync();
     setSuggestions(found);
-    if (!found.length) alert("No new connections found — add more content to your brains first.");
+    if (!found.length) alert("No connections found yet. Try adding more content to your brains first, then scan again.");
   }
 
   async function handleConfirmSuggestion(s: RelationshipSuggestion, idx: number) {
@@ -270,7 +270,7 @@ export default function WorkspaceMap() {
             {discover.isPending ? "Scanning…" : "Discover connections"}
           </button>
           <span className="dim" style={{ fontSize: 12 }}>
-            Hover a node to connect · hover a line to bend it · click a line to edit.
+            Hover a topic to see connection handles · drag to link two topics · click a line to edit or delete it.
           </span>
           <div className="spacer" />
           <div className="wm-legend">
@@ -342,7 +342,7 @@ export default function WorkspaceMap() {
       {selectedEdge && (
         <div className="wm-conn-overlay" onClick={(e) => e.target === e.currentTarget && setSelectedEdge(null)}>
           <div className="wm-conn-popup">
-            <div className="wm-conn-title">Edit connection</div>
+            <div className="wm-conn-title">Edit this connection</div>
             <div className="wm-conn-names">
               <b>{editFromName}</b>
               <span style={{ color: "var(--dimmer)", margin: "0 8px" }}>→</span>
@@ -378,7 +378,7 @@ export default function WorkspaceMap() {
       {pending && (
         <div className="wm-conn-overlay" onClick={(e) => e.target === e.currentTarget && setPending(null)}>
           <div className="wm-conn-popup">
-            <div className="wm-conn-title">What type of connection?</div>
+            <div className="wm-conn-title">How are these topics related?</div>
             <div className="wm-conn-names">
               <b>{fromName}</b>
               <span style={{ color: "var(--dimmer)", margin: "0 8px" }}>→</span>

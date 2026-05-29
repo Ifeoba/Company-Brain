@@ -106,7 +106,7 @@ export default function BrainAuthor() {
             {relationships.length > 0 ? `${relationships.length} connection${relationships.length > 1 ? "s" : ""}` : "connections"}
           </button>
           <button className="btn btn-sm" onClick={() => setShowValidation(true)}>
-            Readiness check
+            How complete?
           </button>
           <button
             className="btn btn-sm"
@@ -126,12 +126,12 @@ export default function BrainAuthor() {
             {showConnections && (
               <div className="ba-expert-panel">
                 <div className="ba-expert-panel-head">
-                  <span>Connected brains</span>
+                  <span>Linked topics</span>
                   <button onClick={() => setShowConnections(false)}>×</button>
                 </div>
                 {relationships.length === 0 && (
                   <div style={{ padding: "14px 16px", color: "var(--dim)", fontSize: 13 }}>
-                    No connections yet. Connect this brain to show how services relate on the workspace map.
+                    No links yet. Link this brain to others to show how they relate on the map.
                   </div>
                 )}
                 {relationships.map((rel) => (
@@ -173,10 +173,10 @@ export default function BrainAuthor() {
                     value={newRelType}
                     onChange={(e) => setNewRelType(e.target.value)}
                   >
-                    <option value="depends-on">depends-on</option>
-                    <option value="uses">uses</option>
-                    <option value="related-to">related-to</option>
-                    <option value="feeds-into">feeds-into</option>
+                    <option value="depends-on">Depends on</option>
+                    <option value="uses">Uses</option>
+                    <option value="related-to">Related to</option>
+                    <option value="feeds-into">Feeds into</option>
                   </select>
                   <button
                     className="btn btn-sm btn-primary"
@@ -199,7 +199,7 @@ export default function BrainAuthor() {
             {showUpdates && (
               <div className="ba-expert-panel">
                 <div className="ba-expert-panel-head">
-                  <span>Knowledge updates</span>
+                  <span>Contributions</span>
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     <button
                       className="btn btn-sm btn-ghost"
@@ -219,7 +219,7 @@ export default function BrainAuthor() {
                 </div>
                 {brainUpdates.filter((u) => u.status === "pending").length === 0 && (
                   <div style={{ padding: "16px", color: "var(--dim)", fontSize: 13 }}>
-                    No pending updates. Share the link above to let experts push knowledge anytime.
+                    Nothing waiting. Share the link above so anyone can add their knowledge anytime.
                   </div>
                 )}
                 {brainUpdates.filter((u) => u.status === "pending").map((u) => (
@@ -236,7 +236,7 @@ export default function BrainAuthor() {
                         onClick={() => integrateUpdate.mutate(u.id)}
                         disabled={integrateUpdate.isPending}
                       >
-                        {integrateUpdate.isPending ? "Integrating…" : "Integrate with Claude"}
+                        {integrateUpdate.isPending ? "Adding to brain…" : "Add to brain"}
                       </button>
                       <button
                         className="btn btn-sm btn-ghost"
