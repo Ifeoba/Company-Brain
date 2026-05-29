@@ -3,7 +3,8 @@ import { api, apiBlob } from "./client";
 import type {
   BrainDetail, BrainRelationship, BrainSummary, BrainUpdate, BrainUpdateLink,
   Collaborator, ExpertQuestion, FileContent, FileSummary, InterviewState,
-  PublicBrainUpdate, PublicQuestion, ReadinessOut, User, WorkspaceNode,
+  PublicBrainUpdate, PublicQuestion, ReadinessOut, RelationshipSuggestion,
+  User, WorkspaceNode,
 } from "../types";
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -351,6 +352,27 @@ export function useRemoveRelationship(slug: string) {
       qc.invalidateQueries({ queryKey: ["relationships", slug] });
       qc.invalidateQueries({ queryKey: ["workspace-map"] });
     },
+  });
+}
+
+export function useDiscoverRelationships() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      api<RelationshipSuggestion[]>("/api/workspace/discover-relationships", { method: "POST" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["workspace-map"] }),
+  });
+}
+
+export function useConfirmSuggestion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ from_slug, to_slug, rel_type }: { from_slug: string; to_slug: string; rel_type: string }) =>
+      api(`/api/brains/${from_slug}/relationships`, {
+        method: "POST",
+        body: JSON.stringify({ to_slug, rel_type }),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["workspace-map"] }),
   });
 }
 

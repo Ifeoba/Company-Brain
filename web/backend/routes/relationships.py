@@ -1,13 +1,21 @@
 from __future__ import annotations
 
+import json
+import re
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from ..auth import current_user
+from ..claude_client import get_client
+from ..config import settings
 from ..db import get_db
 from ..models import Brain, BrainFile, BrainRelationship, User
 from ..readiness import compute_readiness
-from ..schemas import BrainRelationshipCreate, BrainRelationshipOut, WorkspaceNodeOut
+from ..schemas import (
+    BrainRelationshipCreate, BrainRelationshipOut,
+    RelationshipSuggestion, WorkspaceNodeOut,
+)
 
 router = APIRouter()
 
@@ -117,5 +125,100 @@ def workspace_map(user: User = Depends(current_user), db: Session = Depends(get_
             readiness_score=score,
             status=status,
             relationships=[_rel_out(r) for r in rels],
+        ))
+    return result
+
+
+@router.post("/api/workspace/discover-relationships", response_model=list[RelationshipSuggestion])
+def discover_relationships(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    brains = db.query(Brain).filter_by(owner_id=user.id).order_by(Brain.created_at).all()
+    if len(brains) < 2:
+        return []
+
+    brain_ids = [b.id for b in brains]
+    brain_by_slug = {b.slug: b for b in brains}
+
+    existing = db.query(BrainRelationship).filter(
+        BrainRelationship.from_brain_id.in_(brain_ids)
+    ).all()
+    existing_triples = {(r.from_brain.slug, r.to_brain.slug, r.rel_type) for r in existing}
+
+    # Build a compact content summary per brain (overview first, then other files)
+    sections = []
+    for brain in brains:
+        files = db.query(BrainFile).filter_by(brain_id=brain.id).all()
+        file_map = {f.filename: f.content for f in files if f.content}
+        overview = file_map.get("overview.md", "")
+        # Use overview if available, otherwise combine first 300 chars of each file
+        if overview:
+            snippet = overview[:600]
+        else:
+            snippet = " | ".join(
+                f"{fn}: {c[:120]}" for fn, c in list(file_map.items())[:3]
+            )
+        if not snippet:
+            snippet = "(no content yet)"
+        sections.append(f"Brain slug: {brain.slug}\nBrain name: {brain.name}\n{snippet}")
+
+    brains_text = "\n\n---\n\n".join(sections)
+
+    client = get_client(user.encrypted_anthropic_key)
+    response = client.messages.create(
+        model=settings.claude_model,
+        max_tokens=1024,
+        system=(
+            "You analyse knowledge-base documents to find relationships between systems and services. "
+            "Return ONLY a valid JSON array — no prose, no fences. "
+            'Each item must have: {"from_slug":"…","to_slug":"…","rel_type":"…","reason":"…"}. '
+            "rel_type must be exactly one of: depends-on, uses, related-to, feeds-into. "
+            "Only suggest relationships clearly supported by the content. "
+            "Return [] if nothing is clear."
+        ),
+        messages=[{
+            "role": "user",
+            "content": (
+                f"Find relationships between these brains:\n\n{brains_text}\n\n"
+                "Return a JSON array of suggested relationships."
+            ),
+        }],
+    )
+
+    raw = response.content[0].text.strip()
+    match = re.search(r"\[.*\]", raw, re.DOTALL)
+    if not match:
+        return []
+    try:
+        raw_suggestions = json.loads(match.group())
+    except Exception:
+        return []
+
+    result = []
+    seen = set()
+    for s in raw_suggestions:
+        fs = s.get("from_slug", "")
+        ts = s.get("to_slug", "")
+        rt = s.get("rel_type", "")
+        reason = s.get("reason", "")
+        if not (fs and ts and rt):
+            continue
+        if fs not in brain_by_slug or ts not in brain_by_slug:
+            continue
+        if fs == ts:
+            continue
+        if rt not in REL_TYPES:
+            continue
+        if (fs, ts, rt) in existing_triples:
+            continue
+        key = (fs, ts, rt)
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(RelationshipSuggestion(
+            from_slug=fs,
+            from_name=brain_by_slug[fs].name,
+            to_slug=ts,
+            to_name=brain_by_slug[ts].name,
+            rel_type=rt,
+            reason=reason,
         ))
     return result

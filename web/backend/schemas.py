@@ -256,3 +256,12 @@ class WorkspaceNodeOut(BaseModel):
     readiness_score: int
     status: str
     relationships: list[BrainRelationshipOut]
+
+
+class RelationshipSuggestion(BaseModel):
+    from_slug: str
+    from_name: str
+    to_slug: str
+    to_name: str
+    rel_type: str
+    reason: str

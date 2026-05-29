@@ -137,3 +137,12 @@ export interface WorkspaceNode {
   status: string;
   relationships: BrainRelationship[];
 }
+
+export interface RelationshipSuggestion {
+  from_slug: string;
+  from_name: string;
+  to_slug: string;
+  to_name: string;
+  rel_type: string;
+  reason: string;
+}

@@ -1,8 +1,9 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useWorkspaceMap } from "../api/hooks";
+import { useConfirmSuggestion, useDiscoverRelationships, useWorkspaceMap } from "../api/hooks";
 import AppTopbar from "../components/Layout";
-import type { WorkspaceNode } from "../types";
+import Icon from "../components/Icon";
+import type { RelationshipSuggestion, WorkspaceNode } from "../types";
 
 const NW = 164;
 const NH = 76;
@@ -27,17 +28,32 @@ const REL_COLOR: Record<string, string> = {
 
 export default function WorkspaceMap() {
   const { data: nodes = [], isLoading } = useWorkspaceMap();
+  const discover = useDiscoverRelationships();
+  const confirmSuggestion = useConfirmSuggestion();
   const containerRef = useRef<HTMLDivElement>(null);
   const [positions, setPositions] = useState<Array<{ x: number; y: number }>>([]);
-  const [size, setSize] = useState({ w: 800, h: 600 });
+  const [suggestions, setSuggestions] = useState<RelationshipSuggestion[]>([]);
   const navigate = useNavigate();
+
+  async function handleDiscover() {
+    const found = await discover.mutateAsync();
+    setSuggestions(found);
+  }
+
+  function dismissSuggestion(idx: number) {
+    setSuggestions((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  async function handleConfirm(s: RelationshipSuggestion, idx: number) {
+    await confirmSuggestion.mutateAsync({ from_slug: s.from_slug, to_slug: s.to_slug, rel_type: s.rel_type });
+    dismissSuggestion(idx);
+  }
 
   useLayoutEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const calc = () => {
       const { width, height } = el.getBoundingClientRect();
-      setSize({ w: width, h: height });
       setPositions(circularPositions(nodes.length, width, height));
     };
     calc();
@@ -58,6 +74,56 @@ export default function WorkspaceMap() {
   return (
     <div className="bl-shell">
       <AppTopbar />
+
+      {/* Discovery toolbar */}
+      {!isLoading && nodes.length >= 2 && (
+        <div className="wm-toolbar">
+          <button
+            className="btn btn-sm btn-ghost"
+            onClick={handleDiscover}
+            disabled={discover.isPending}
+          >
+            <Icon name="spark" size={12} />
+            {discover.isPending ? "Scanning…" : "Discover connections"}
+          </button>
+          <span className="dim" style={{ fontSize: 12 }}>
+            Claude scans your brain content and suggests relationships.
+          </span>
+        </div>
+      )}
+
+      {/* Suggestions panel */}
+      {suggestions.length > 0 && (
+        <div className="wm-suggestions">
+          <div className="wm-suggestions-head">
+            <span>{suggestions.length} suggested connection{suggestions.length > 1 ? "s" : ""}</span>
+            <button className="btn btn-ghost btn-sm" onClick={() => setSuggestions([])}>Clear all</button>
+          </div>
+          {suggestions.map((s, i) => (
+            <div key={i} className="wm-suggestion-item">
+              <div className="wm-suggestion-names">
+                <b>{s.from_name}</b>
+                <span className="wm-suggestion-rel">{s.rel_type}</span>
+                <b>{s.to_name}</b>
+              </div>
+              <div className="wm-suggestion-reason">{s.reason}</div>
+              <div className="wm-suggestion-actions">
+                <button
+                  className="btn btn-sm btn-primary"
+                  onClick={() => handleConfirm(s, i)}
+                  disabled={confirmSuggestion.isPending}
+                >
+                  Add connection
+                </button>
+                <button className="btn btn-sm btn-ghost" onClick={() => dismissSuggestion(i)}>
+                  Skip
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="wm-canvas" ref={containerRef}>
         {isLoading ? null : nodes.length === 0 ? (
           <div className="wm-empty">
