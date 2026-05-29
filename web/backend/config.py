@@ -1,8 +1,12 @@
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Always resolve .env relative to this file (web/backend/ → web/)
+_ENV_FILE = Path(__file__).parent.parent / ".env"
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(env_file=str(_ENV_FILE), env_file_encoding="utf-8", extra="ignore")
 
     database_url: str = "sqlite:///./data/company-brain.db"
     session_secret: str = "dev-secret-change-in-production"
@@ -15,7 +19,7 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     resend_from_email: str = "noreply@example.com"
 
-    frontend_origin: str = "http://localhost:5173"
+    frontend_origin: str = "http://localhost:8000"
 
     claude_model: str = "claude-haiku-4-5-20251001"
 
