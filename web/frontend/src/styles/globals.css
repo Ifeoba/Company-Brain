@@ -469,6 +469,14 @@
 .btn-danger:hover { background: color-mix(in srgb, var(--bad) 10%, transparent) !important; }
 
 /* ============================================================
+   SPEECH-TO-TEXT MIC BUTTON
+   ============================================================ */
+.ba-mic-btn { position: absolute; bottom: 10px; right: 10px; width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid var(--border); background: var(--panel); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--dim); transition: border-color 0.15s, color 0.15s, background 0.15s; }
+.ba-mic-btn:hover { border-color: var(--border-2); color: var(--text-2); }
+.ba-mic-btn.listening { background: #fee2e2; border-color: #c93030; color: #c93030; animation: mic-pulse 1.5s ease-in-out infinite; }
+@keyframes mic-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(201, 48, 48, 0.25); } 50% { box-shadow: 0 0 0 6px rgba(201, 48, 48, 0); } }
+
+/* ============================================================
    MISC
    ============================================================ */
 .brain-ui svg { display: inline-block; flex-shrink: 0; }

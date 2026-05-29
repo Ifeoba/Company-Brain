@@ -37,6 +37,59 @@ function SavedIndicator({ lastSaved }: { lastSaved: Date | null }) {
   );
 }
 
+const hasSpeechRecognition = Boolean(
+  typeof window !== "undefined" &&
+  ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
+);
+
+function MicButton({ onStart, onTranscript, disabled }: { onStart: () => void; onTranscript: (text: string, isFinal: boolean) => void; disabled?: boolean }) {
+  const [listening, setListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  function toggle() {
+    if (listening) {
+      recognitionRef.current?.stop();
+      setListening(false);
+      return;
+    }
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    onStart();
+    const r = new SR();
+    r.continuous = true;
+    r.interimResults = true;
+    r.onresult = (e: any) => {
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        onTranscript(e.results[i][0].transcript, e.results[i].isFinal);
+      }
+    };
+    r.onend = () => setListening(false);
+    r.onerror = () => setListening(false);
+    recognitionRef.current = r;
+    r.start();
+    setListening(true);
+  }
+
+  // clean up on unmount
+  useEffect(() => () => recognitionRef.current?.stop(), []);
+
+  return (
+    <button
+      type="button"
+      className={`ba-mic-btn${listening ? " listening" : ""}`}
+      onClick={toggle}
+      disabled={disabled}
+      title={listening ? "Stop recording" : "Speak your answer"}
+    >
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="5" y="1" width="6" height="9" rx="3" />
+        <path d="M3 8a5 5 0 0010 0" />
+        <line x1="8" y1="13" x2="8" y2="15" />
+        <line x1="5.5" y1="15" x2="10.5" y2="15" />
+      </svg>
+    </button>
+  );
+}
+
 export default function QuestionPane({ slug, step, interview, collaborators, onDraftReady, onAskExpert }: Props) {
   const totalQ = step.questions.length;
   const qIndex = interview.current_step === step.number ? interview.current_question_index : 0;
@@ -48,6 +101,10 @@ export default function QuestionPane({ slug, step, interview, collaborators, onD
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [draftError, setDraftError] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Speech-to-text state
+  const speechBaseRef = useRef(""); // answer snapshot when recording started
+  const speechFinalRef = useRef(""); // finalized speech so far this session
 
   const saveAnswer = useSaveAnswer(slug);
   const updateProgress = useUpdateProgress(slug);
@@ -77,6 +134,16 @@ export default function QuestionPane({ slug, step, interview, collaborators, onD
     }, 800);
     return () => clearTimeout(t);
   }, [answer]);
+
+  function handleTranscript(text: string, isFinal: boolean) {
+    if (isFinal) {
+      speechFinalRef.current += text + " ";
+    }
+    const base = speechBaseRef.current;
+    const sep = base && !base.endsWith(" ") && !base.endsWith("\n") ? " " : "";
+    const interim = isFinal ? "" : text;
+    setAnswer(base + sep + speechFinalRef.current + interim);
+  }
 
   function goTo(idx: number) {
     const clamped = Math.max(0, Math.min(totalQ - 1, idx));
@@ -111,15 +178,24 @@ export default function QuestionPane({ slug, step, interview, collaborators, onD
       </div>
 
       {question && (
-        <div className="ba-q">
+        <div className="ba-q" style={{ position: "relative" }}>
           <textarea
             ref={textareaRef}
             className="textarea"
-            style={{ minHeight: 130 }}
+            style={{ minHeight: 130, paddingRight: hasSpeechRecognition ? 44 : undefined }}
             placeholder="Type your answer here. Plain English is perfect — no formatting required."
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
           />
+          {hasSpeechRecognition && (
+            <MicButton
+              onTranscript={handleTranscript}
+              onStart={() => {
+                speechBaseRef.current = answer;
+                speechFinalRef.current = "";
+              }}
+            />
+          )}
         </div>
       )}
 
