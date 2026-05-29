@@ -25,12 +25,12 @@ STEPS: list[Step] = [
             Question(
                 key="process_name",
                 text="What's the name of the process or job this is about?\n"
-                     "(e.g. "invoice approvals", "customer onboarding", "expense categorisation")",
+                     "(e.g. invoice approvals, customer onboarding, expense categorisation)",
             ),
             Question(
                 key="trigger",
                 text="What usually kicks this off?\n"
-                     "(e.g. "an email arrives", "a customer signs up", "someone submits a form")",
+                     "(e.g. an email arrives, a customer signs up, someone submits a form)",
             ),
             Question(
                 key="done_looks_like",
@@ -48,7 +48,7 @@ STEPS: list[Step] = [
             Question(
                 key="tools_used",
                 text="What tools or apps do they use to get it done?\n"
-                     "(e.g. email, spreadsheets, Salesforce, a WhatsApp group — anything goes)",
+                     "(e.g. email, spreadsheets, Salesforce, a WhatsApp group -- anything goes)",
             ),
             Question(
                 key="out_of_scope",
@@ -74,7 +74,7 @@ STEPS: list[Step] = [
             Question(
                 key="second_problem",
                 text="What's the second most common issue?\n"
-                     "(There's always more than one — take your time.)",
+                     "(There's always more than one -- take your time.)",
             ),
             Question(
                 key="unwritten_rules",
@@ -84,7 +84,7 @@ STEPS: list[Step] = [
             Question(
                 key="more_unwritten_rules",
                 text="Any other things that aren't written down anywhere but matter a lot?\n"
-                     "(These are gold — don't hold back)",
+                     "(These are gold -- don't hold back)",
             ),
             Question(
                 key="special_cases",
@@ -124,7 +124,7 @@ STEPS: list[Step] = [
             Question(
                 key="decision_rules",
                 text="Are there any rules of thumb the person doing this job relies on?\n"
-                     "(e.g. "if the amount is over £500, always check with the manager first")",
+                     "(e.g. if the amount is over 500, always check with the manager first)",
             ),
             Question(
                 key="escalation_trigger",
@@ -134,7 +134,7 @@ STEPS: list[Step] = [
             Question(
                 key="escalation_who",
                 text="When it needs to be escalated, who gets notified?\n"
-                     "And how — email, Slack, a phone call?",
+                     "And how -- email, Slack, a phone call?",
             ),
         ],
     ),
@@ -146,7 +146,7 @@ STEPS: list[Step] = [
             Question(
                 key="actions",
                 text="What are the main tasks this process actually carries out?\n"
-                     "List them simply — things like "look up account info", "send a confirmation email", "update a record".",
+                     "List them simply -- things like: look up account info, send a confirmation email, update a record.",
             ),
             Question(
                 key="info_needed",
@@ -156,12 +156,12 @@ STEPS: list[Step] = [
             Question(
                 key="what_it_produces",
                 text="What does it produce or change when it's done?\n"
-                     "(e.g. "a filled-in spreadsheet row", "an email sent to the customer", "a status updated in the system")",
+                     "(e.g. a filled-in spreadsheet row, an email sent to the customer, a status updated in the system)",
             ),
             Question(
                 key="connected_systems",
                 text="Which apps or systems does this connect to?\n"
-                     "(e.g. Gmail, Slack, your CRM, a database, WhatsApp — list them all)",
+                     "(e.g. Gmail, Slack, your CRM, a database, WhatsApp -- list them all)",
             ),
             Question(
                 key="read_write",
@@ -184,7 +184,7 @@ STEPS: list[Step] = [
                 key="fully_automatic",
                 text="What kinds of decisions can be handled completely automatically,\n"
                      "without anyone needing to check?\n"
-                     "Be as specific as you can — the more detail the better.",
+                     "Be as specific as you can -- the more detail the better.",
             ),
             Question(
                 key="needs_approval",
@@ -194,12 +194,12 @@ STEPS: list[Step] = [
             Question(
                 key="approval_how",
                 text="How does that approval happen in practice?\n"
-                     "(e.g. "they reply to an email", "they click approve in Slack", "they call me")",
+                     "(e.g. they reply to an email, they click approve in Slack, they call me)",
             ),
             Question(
                 key="never_does",
                 text="What should this absolutely never do, no matter what?\n"
-                     "Think about what would cause a serious problem — or make the news.",
+                     "Think about what would cause a serious problem -- or make the news.",
             ),
             Question(
                 key="data_limits",
@@ -217,13 +217,13 @@ STEPS: list[Step] = [
             Question(
                 key="proof_work",
                 text="Has this been tested on a real example yet, using real information?\n"
-                     "If yes — describe the example: what came in, what happened, what was produced.\n"
-                     "If not yet, just type "not yet".",
+                     "If yes -- describe the example: what came in, what happened, what was produced.\n"
+                     "If not yet, just type: not yet.",
             ),
             Question(
                 key="verifier",
                 text="Who checked the result?\n"
-                     "(Name and job title — must be someone other than the person who set this up)",
+                     "(Name and job title -- must be someone other than the person who set this up)",
             ),
             Question(
                 key="verdict",
