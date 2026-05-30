@@ -550,46 +550,33 @@
 .pill.info { color: var(--accent); background: var(--accent-bg); }
 
 /* ── Triggers modal ──────────────────────────────────────── */
-.triggers-modal { width: 560px; max-width: 95vw; max-height: 80vh; overflow-y: auto; }
+.triggers-modal { width: 540px; max-width: 95vw; max-height: 85vh; overflow-y: auto; }
 
-.trigger-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
-.trigger-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;
-  background: var(--surface-1);
-}
-.trigger-divider { border: none; border-top: 1px solid var(--hairline); margin: 16px 0; }
+/* Trigger list (existing triggers) */
+.trigger-list { display: flex; flex-direction: column; gap: 4px; }
+.trigger-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); }
+.trigger-kind-pill { font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--dim); background: var(--panel-2); border: 1px solid var(--border); border-radius: 3px; padding: 1px 5px; flex-shrink: 0; }
+.trigger-row-info { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 1px; }
+.trigger-row-name { font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trigger-row-meta { font-size: 11px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.trigger-secret-card {
-  background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px;
-  padding: 14px; margin-top: 8px;
-}
-.trigger-secret-warn {
-  font-size: 11.5px; color: #b45309; background: #fef3c7;
-  border: 1px solid #fcd34d; border-radius: 4px; padding: 6px 10px; margin-top: 8px;
-}
+/* Kind selector */
+.trigger-kind-tabs { display: flex; gap: 6px; }
+.trigger-kind-tabs .btn { flex: 1; }
 
-/* Kind selector tabs */
-.trigger-kind-tabs { display: flex; gap: 4px; margin-bottom: 10px; }
-.trigger-kind-tab {
-  flex: 1; padding: 6px 0; font-size: 12px; font-weight: 500; border-radius: 5px;
-  border: 1px solid var(--border); background: var(--surface-1); color: var(--text-2);
-  cursor: pointer; transition: background .12s, border-color .12s, color .12s;
-}
-.trigger-kind-tab:hover { background: var(--surface-2); }
-.trigger-kind-tab.active { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); font-weight: 600; }
-.input-error { border-color: var(--bad) !important; }
+/* Post-creation reveal */
+.trigger-reveal { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 16px; }
+.trigger-copy-row { display: flex; align-items: center; gap: 8px; }
+.trigger-copy-value { flex: 1; font-size: 11.5px; background: var(--panel); border: 1px solid var(--border); border-radius: 4px; padding: 5px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+.trigger-warn { font-size: 11.5px; color: #92400e; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 4px; padding: 6px 10px; margin: 8px 0 0; }
+[data-theme="dark"] .trigger-warn { color: #fbbf24; background: rgba(251,191,36,0.1); border-color: rgba(251,191,36,0.3); }
 
 /* Toggle switch */
-.trigger-toggle { position: relative; display: inline-flex; align-items: center; cursor: pointer; }
+.trigger-toggle { position: relative; display: inline-flex; align-items: center; cursor: pointer; flex-shrink: 0; }
 .trigger-toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
-.toggle-track {
-  width: 32px; height: 18px; background: var(--border); border-radius: 9px; transition: background .15s;
-  position: relative;
-}
-.toggle-track::after {
-  content: ""; position: absolute; top: 2px; left: 2px;
-  width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform .15s;
-}
+.toggle-track { width: 30px; height: 17px; background: var(--border); border-radius: 9px; transition: background .15s; position: relative; }
+.toggle-track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 13px; height: 13px; border-radius: 50%; background: #fff; transition: transform .15s; }
 .trigger-toggle input:checked ~ .toggle-track { background: var(--accent); }
-.trigger-toggle input:checked ~ .toggle-track::after { transform: translateX(14px); }
+.trigger-toggle input:checked ~ .toggle-track::after { transform: translateX(13px); }
+
+.input-error { border-color: var(--bad) !important; }
