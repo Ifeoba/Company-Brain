@@ -279,6 +279,13 @@ export default function BrainsList() {
                       >
                         Activity
                       </Link>
+                      <Link
+                        to={`/brains/${b.slug}/analytics`}
+                        className="btn btn-sm btn-ghost"
+                        title="Analytics"
+                      >
+                        Analytics
+                      </Link>
                       <button
                         className="btn btn-sm btn-ghost bl-delete-btn"
                         title="Delete brain"

@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, apiBlob } from "./client";
 import type {
-  AuditLogEntry, BrainActivityOut, BrainDetail, BrainRelationship, BrainStatsOut, BrainSummary, BrainUpdate, BrainUpdateLink,
+  AuditLogEntry, BrainActivityOut, BrainAnalyticsOut, BrainDetail, BrainRelationship, BrainStatsOut, BrainSummary, BrainUpdate, BrainUpdateLink,
   BuiltinTool, Collaborator, EscalationOut, ExpertQuestion, FileContent, FileSummary, InterviewState,
   MaintainerSuggestionOut, ProviderInfo, PublicBrainUpdate, PublicQuestion, ReadinessOut, RelationshipSuggestion,
   RunListItem, RunOut, RunTraceOut, SemanticReviewOut, ToolCallOut, ToolOut, TriggerOut, User, VaultSecretSummary,
@@ -714,6 +714,17 @@ export function useResolveEscalation() {
       qc.invalidateQueries({ queryKey: ["runs"] });
       qc.invalidateQueries({ queryKey: ["run"] });
     },
+  });
+}
+
+// ── Analytics (Layer 4) ───────────────────────────────────────────────────────
+
+export function useBrainAnalytics(slug: string) {
+  return useQuery<BrainAnalyticsOut>({
+    queryKey: ["brain-analytics", slug],
+    queryFn: () => api(`/api/brains/${slug}/analytics`),
+    enabled: !!slug,
+    staleTime: 120000,
   });
 }
 

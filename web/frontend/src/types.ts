@@ -242,6 +242,40 @@ export interface VaultSecretSummary {
   updated_at: string;
 }
 
+// ── Analytics (Layer 4) ───────────────────────────────────────────────────────
+
+export interface RunTimelineItem {
+  id: string;
+  status: string;
+  verdict: string | null;
+  created_at: string;
+  completed_at: string | null;
+  cost_usd: number;
+}
+
+export interface HeatmapDay {
+  date: string;
+  count: number;
+}
+
+export interface RuleCount {
+  rule: string;
+  count: number;
+}
+
+export interface BrainAnalyticsOut {
+  top_rules: RuleCount[];
+  outcome_counts: {
+    completed: number;
+    failed: number;
+    awaiting_approval: number;
+    running: number;
+  };
+  timeline: RunTimelineItem[];
+  heatmap: HeatmapDay[];
+  total_analyzed: number;
+}
+
 // ── Activity (Layer 2) ────────────────────────────────────────────────────────
 
 export interface DailyBrainStatsOut {

@@ -6,6 +6,7 @@ import ExpertAnswer from "./pages/ExpertAnswer";
 import Login from "./pages/Login";
 import RunPage from "./pages/RunPage";
 import ActivityPage from "./pages/ActivityPage";
+import AnalyticsPage from "./pages/AnalyticsPage";
 import RunTrace from "./pages/RunTrace";
 import Settings from "./pages/Settings";
 import UpdatePage from "./pages/UpdatePage";
@@ -53,6 +54,14 @@ export default function App() {
             element={
               <RequireAuth>
                 <BrainAuthor />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/brains/:slug/analytics"
+            element={
+              <RequireAuth>
+                <AnalyticsPage />
               </RequireAuth>
             }
           />

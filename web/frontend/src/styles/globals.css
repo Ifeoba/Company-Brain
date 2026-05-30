@@ -712,3 +712,39 @@
 .act-tile-val { font-size: 20px; font-weight: 700; color: var(--text); line-height: 1; margin-bottom: 4px; }
 .act-tile-label { font-size: 11.5px; }
 .act-tile-sub { font-size: 11px; margin-top: 2px; }
+
+/* ── Analytics page (Layer 4) ────────────────────────────── */
+.an-page { display: flex; flex-direction: column; min-height: 100%; background: var(--bg); }
+.an-content { max-width: 800px; margin: 0 auto; padding: 24px 24px 60px; width: 100%; display: flex; flex-direction: column; gap: 16px; }
+
+.an-panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+.an-full { width: 100%; }
+.an-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 600px) { .an-row2 { grid-template-columns: 1fr; } }
+
+.an-panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.an-panel-head strong { font-size: 14px; }
+.an-empty { color: var(--dimmer); font-size: 13px; padding: 8px 0; }
+.an-flow-empty { padding: 20px 0; }
+
+/* Heatmap */
+.an-heatmap-wrap { display: flex; flex-direction: column; gap: 8px; }
+.an-heatmap-legend { display: flex; align-items: center; gap: 4px; }
+.an-legend-cell { width: 11px; height: 11px; border-radius: 2px; }
+
+/* Outcome bars */
+.an-bar-list { display: flex; flex-direction: column; gap: 8px; }
+.an-bar-row { display: grid; grid-template-columns: 130px 1fr 32px 36px; align-items: center; gap: 8px; }
+.an-bar-label { font-size: 12px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.an-bar-track { height: 10px; background: var(--bg-2); border-radius: 5px; overflow: hidden; }
+.an-bar-fill { height: 100%; border-radius: 5px; transition: width 0.3s ease; }
+.an-bar-count { font-size: 12px; font-weight: 600; color: var(--text); text-align: right; }
+.an-bar-pct { font-size: 11px; text-align: right; }
+
+/* Rules chart */
+.an-rules-list { display: flex; flex-direction: column; gap: 7px; }
+.an-rules-row { display: grid; grid-template-columns: 1fr 80px 28px; align-items: center; gap: 8px; }
+.an-rules-label { font-size: 11.5px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.an-rules-track { height: 8px; background: var(--bg-2); border-radius: 4px; overflow: hidden; }
+.an-rules-fill { height: 100%; background: var(--accent); border-radius: 4px; opacity: 0.7; transition: width 0.3s ease; }
+.an-rules-count { font-size: 11px; text-align: right; }
