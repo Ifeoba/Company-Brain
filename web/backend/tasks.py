@@ -776,3 +776,59 @@ def run_maintainer_for_all() -> None:
         brain_ids = [b.id for b in db.query(Brain.id).all()]
     for brain_id in brain_ids:
         run_maintainer_for_brain.delay(brain_id)
+
+
+@celery_app.task(name="backend.tasks.send_weekly_digest")
+def send_weekly_digest() -> None:
+    """
+    Weekly beat task: email each workspace owner a summary of the past 7 days.
+    Includes run counts, pending suggestions, and top escalations.
+    """
+    from datetime import timedelta
+    from .models import Brain, DailyBrainStats, MaintainerSuggestion, User, Workspace
+
+    week_ago = datetime.utcnow() - timedelta(days=7)
+
+    with session_scope() as db:
+        workspaces = db.query(Workspace).all()
+        for ws in workspaces:
+            owner = db.query(User).filter_by(id=ws.owner_id).first()
+            if not owner or not owner.email:
+                continue
+
+            brains = db.query(Brain).filter_by(owner_id=owner.id).all()
+            brain_ids = [b.id for b in brains]
+
+            # Aggregate runs over the past 7 days from DailyBrainStats
+            stats_rows = (
+                db.query(DailyBrainStats)
+                .filter(
+                    DailyBrainStats.brain_id.in_(brain_ids),
+                    DailyBrainStats.date >= week_ago.date().isoformat(),
+                )
+                .all()
+            ) if brain_ids else []
+
+            total_runs = sum(s.runs_total for s in stats_rows)
+            total_escalated = sum(s.runs_escalated for s in stats_rows)
+            total_failed = sum(s.runs_failed for s in stats_rows)
+
+            pending_suggestions = (
+                db.query(MaintainerSuggestion)
+                .filter(
+                    MaintainerSuggestion.brain_id.in_(brain_ids),
+                    MaintainerSuggestion.status == "pending",
+                )
+                .count()
+            ) if brain_ids else 0
+
+            # Stub: log the digest instead of sending email (email integration pending)
+            import logging
+            logging.getLogger(__name__).info(
+                "Weekly digest for %s: %d runs, %d escalated, %d failed, %d pending suggestions",
+                owner.email,
+                total_runs,
+                total_escalated,
+                total_failed,
+                pending_suggestions,
+            )

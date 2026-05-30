@@ -20,6 +20,12 @@ export default function AppTopbar() {
           <span className="ws-name dim">
             workspace · <b style={{ color: "var(--text-2)" }}>{user.github_username}</b>
           </span>
+          <Link to="/insights" className="btn btn-ghost btn-sm topbar-nav-link">
+            Insights
+          </Link>
+          <Link to="/audit" className="btn btn-ghost btn-sm topbar-nav-link">
+            Audit
+          </Link>
           <button className="btn btn-ghost btn-sm" onClick={() => navigate("/settings")}>
             <Icon name="bell" size={13} />
           </button>

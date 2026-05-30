@@ -1,8 +1,10 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { useMe } from "./api/hooks";
+import AuditPage from "./pages/AuditPage";
 import BrainAuthor from "./pages/BrainAuthor";
 import BrainsList from "./pages/BrainsList";
 import ExpertAnswer from "./pages/ExpertAnswer";
+import InsightsPage from "./pages/InsightsPage";
 import Login from "./pages/Login";
 import RunPage from "./pages/RunPage";
 import ActivityPage from "./pages/ActivityPage";
@@ -94,6 +96,22 @@ export default function App() {
             element={
               <RequireAuth>
                 <Settings />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/audit"
+            element={
+              <RequireAuth>
+                <AuditPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/insights"
+            element={
+              <RequireAuth>
+                <InsightsPage />
               </RequireAuth>
             }
           />

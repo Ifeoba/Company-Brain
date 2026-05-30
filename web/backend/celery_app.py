@@ -24,6 +24,7 @@ celery_app.conf.update(
         "backend.tasks.execute_run_task": {"queue": "runs"},
         "backend.tasks.check_scheduled_triggers": {"queue": "runs"},
         "backend.tasks.aggregate_daily_stats": {"queue": "runs"},
+        "backend.tasks.send_weekly_digest": {"queue": "runs"},
         "backend.tasks.run_maintainer_for_brain": {"queue": "maintainer"},
         "backend.tasks.run_maintainer_for_all": {"queue": "maintainer"},
     },
@@ -39,6 +40,10 @@ celery_app.conf.update(
         "maintainer-daily": {
             "task": "backend.tasks.run_maintainer_for_all",
             "schedule": 86400.0,
+        },
+        "weekly-digest": {
+            "task": "backend.tasks.send_weekly_digest",
+            "schedule": 604800.0,  # every 7 days
         },
     },
 )

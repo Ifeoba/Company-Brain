@@ -384,6 +384,55 @@ export interface RunTraceOut {
   steps: RunStepOut[];
 }
 
+// ── Audit page (Layer 5) ──────────────────────────────────────────────────────
+
+export interface AuditPageOut {
+  entries: AuditLogEntry[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+// ── Workspace insights / maintainer feed (Layer 6) ────────────────────────────
+
+export interface InsightSuggestion {
+  id: string;
+  brain_slug: string;
+  brain_name: string;
+  pattern_type: string;
+  finding: string;
+  proposed_diff: string | null;
+  target_file: string | null;
+  status: "pending" | "accepted" | "dismissed";
+  created_at: string;
+  resolved_at: string | null;
+}
+
+export interface PatternSummaryItem {
+  pattern_type: string;
+  label: string;
+  count: number;
+}
+
+export interface InsightActivityItem {
+  id: string;
+  action: string;
+  resource_type: string;
+  resource_id: string | null;
+  occurred_at: string | null;
+  actor_id: string | null;
+}
+
+export interface WorkspaceInsightsOut {
+  pending_count: number;
+  brains_with_pending: number;
+  accepted_this_week: number;
+  dismissed_this_week: number;
+  pattern_summary: PatternSummaryItem[];
+  suggestions: InsightSuggestion[];
+  recent_activity: InsightActivityItem[];
+}
+
 // ── Tool calls (approval flow) ─────────────────────────────────────────────────
 
 export interface ToolCallOut {

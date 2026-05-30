@@ -2,11 +2,11 @@ import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, apiBlob } from "./client";
 import type {
-  AuditLogEntry, BrainActivityOut, BrainAnalyticsOut, BrainDetail, BrainRelationship, BrainStatsOut, BrainSummary, BrainUpdate, BrainUpdateLink,
+  AuditLogEntry, AuditPageOut, BrainActivityOut, BrainAnalyticsOut, BrainDetail, BrainRelationship, BrainStatsOut, BrainSummary, BrainUpdate, BrainUpdateLink,
   BuiltinTool, Collaborator, EscalationOut, ExpertQuestion, FileContent, FileSummary, InterviewState,
   MaintainerSuggestionOut, ProviderInfo, PublicBrainUpdate, PublicQuestion, ReadinessOut, RelationshipSuggestion,
   RunListItem, RunOut, RunTraceOut, SemanticReviewOut, ToolCallOut, ToolOut, TriggerOut, User, VaultSecretSummary,
-  WorkspaceDashboardOut, WorkspaceNode,
+  WorkspaceDashboardOut, WorkspaceInsightsOut, WorkspaceNode,
 } from "../types";
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -754,6 +754,67 @@ export function useAuditLog() {
   return useQuery<AuditLogEntry[]>({
     queryKey: ["audit-log"],
     queryFn: () => api("/api/workspace/audit-log"),
+  });
+}
+
+export function useAuditPage(params: {
+  action?: string;
+  resource_type?: string;
+  from_date?: string;
+  to_date?: string;
+  limit?: number;
+  offset?: number;
+}) {
+  const qs = new URLSearchParams();
+  if (params.action) qs.set("action", params.action);
+  if (params.resource_type) qs.set("resource_type", params.resource_type);
+  if (params.from_date) qs.set("from_date", params.from_date);
+  if (params.to_date) qs.set("to_date", params.to_date);
+  if (params.limit != null) qs.set("limit", String(params.limit));
+  if (params.offset != null) qs.set("offset", String(params.offset));
+  const query = qs.toString();
+  return useQuery<AuditPageOut>({
+    queryKey: ["audit-page", query],
+    queryFn: () => api(`/api/workspace/audit${query ? "?" + query : ""}`),
+    staleTime: 30000,
+  });
+}
+
+// ── Workspace insights (Layer 6) ──────────────────────────────────────────────
+
+export function useWorkspaceInsights() {
+  return useQuery<WorkspaceInsightsOut>({
+    queryKey: ["workspace-insights"],
+    queryFn: () => api("/api/workspace/insights"),
+    staleTime: 60000,
+    refetchInterval: 120000,
+  });
+}
+
+export function useAcceptInsight() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (suggestionId: string) =>
+      api(`/api/workspace/insights/${suggestionId}/accept`, { method: "POST" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["workspace-insights"] }),
+  });
+}
+
+export function useDismissInsight() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (suggestionId: string) =>
+      api(`/api/workspace/insights/${suggestionId}/dismiss`, { method: "POST" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["workspace-insights"] }),
+  });
+}
+
+export function useTriggerAllMaintainer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      api("/api/workspace/insights/trigger-all", { method: "POST" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["workspace-insights"] }),
   });
 }
 
