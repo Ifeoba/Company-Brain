@@ -1,5 +1,4 @@
 import json
-import sys
 from datetime import datetime
 from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException
@@ -16,16 +15,15 @@ from ..schemas import (
 
 router = APIRouter()
 
-# Resolve templates directory relative to this file: web/backend/routes/ → repo root / spec/templates
+# parents[3] is /app in Docker (WORKDIR /app/web) and the repo root in dev —
+# both locations have spec/templates and the installed builder package.
 TEMPLATES_DIR = Path(__file__).resolve().parents[3] / "spec" / "templates"
 
-# Import prompts from existing builder — do not reimplement
 try:
-    sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
     from builder.interview.runner import _SYSTEM_PROMPT, _SYSTEM_PROMPT_JSON
     from builder.interview.steps import STEPS
 except ImportError as e:
-    raise RuntimeError(f"Could not import builder package: {e}. Ensure company-brain is installed (pip install -e .).")
+    raise RuntimeError(f"Could not import builder package: {e}. Run pip install -e . from the repo root.")
 
 
 def _get_brain(db: Session, slug: str, user: User) -> Brain:

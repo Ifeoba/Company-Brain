@@ -29,11 +29,11 @@ services:
 
   api:
     build:
-      context: ./web
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: web/Dockerfile
     command: uvicorn backend.app:app --host 0.0.0.0 --port 8000 --reload
     volumes:
-      - ./web:/app
+      - ./web:/app/web
     ports:
       - "8000:8000"
     environment:
@@ -49,11 +49,11 @@ services:
 
   worker:
     build:
-      context: ./web
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: web/Dockerfile
     command: celery -A backend.celery_app worker --loglevel=info -Q runs,maintainer -c 4
     volumes:
-      - ./web:/app
+      - ./web:/app/web
     environment:
       DATABASE_URL: postgresql+psycopg://cb:cb_dev@db:5432/companybrain
       REDIS_URL: redis://redis:6379/0
@@ -67,11 +67,11 @@ services:
 
   beat:
     build:
-      context: ./web
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: web/Dockerfile
     command: celery -A backend.celery_app beat --loglevel=info
     volumes:
-      - ./web:/app
+      - ./web:/app/web
     environment:
       DATABASE_URL: postgresql+psycopg://cb:cb_dev@db:5432/companybrain
       REDIS_URL: redis://redis:6379/0
