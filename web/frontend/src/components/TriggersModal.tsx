@@ -115,14 +115,14 @@ export default function TriggersModal({ slug, onClose }: Props) {
   const canSubmit = name.trim() && (kind !== "schedule" || cronExpr.trim()) && !createTrigger.isPending;
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-box triggers-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <strong>Triggers</strong>
+    <div className="modal-scrim" onClick={onClose}>
+      <div className="modal-card triggers-modal" onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <h2 style={{ margin: 0 }}>Triggers</h2>
           <button className="btn btn-sm btn-ghost" onClick={onClose}>✕</button>
         </div>
 
-        <div className="modal-body">
+        <div>
           {/* Existing triggers */}
           {isLoading ? (
             <p className="dim" style={{ fontSize: 13 }}>Loading…</p>
@@ -303,3 +303,4 @@ export default function TriggersModal({ slug, onClose }: Props) {
     </div>
   );
 }
+

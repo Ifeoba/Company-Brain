@@ -550,7 +550,7 @@
 .pill.info { color: var(--accent); background: var(--accent-bg); }
 
 /* ── Triggers modal ──────────────────────────────────────── */
-.triggers-modal { max-width: 560px; }
+.triggers-modal { width: 560px; max-width: 95vw; max-height: 80vh; overflow-y: auto; }
 
 .trigger-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
 .trigger-row {
