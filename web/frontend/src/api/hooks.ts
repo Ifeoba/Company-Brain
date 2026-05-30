@@ -3,9 +3,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, apiBlob } from "./client";
 import type {
   BrainDetail, BrainRelationship, BrainSummary, BrainUpdate, BrainUpdateLink,
-  Collaborator, ExpertQuestion, FileContent, FileSummary, InterviewState,
+  BuiltinTool, Collaborator, ExpertQuestion, FileContent, FileSummary, InterviewState,
   ProviderInfo, PublicBrainUpdate, PublicQuestion, ReadinessOut, RelationshipSuggestion,
-  RunListItem, RunOut, SemanticReviewOut, TriggerOut, User, WorkspaceNode,
+  RunListItem, RunOut, SemanticReviewOut, ToolOut, TriggerOut, User, VaultSecretSummary, WorkspaceNode,
 } from "../types";
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -540,5 +540,92 @@ export function useToggleTrigger(slug: string) {
         body: JSON.stringify({ is_active }),
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["triggers", slug] }),
+  });
+}
+
+// ── Tools ──────────────────────────────────────────────────────────────────────
+
+export function useBuiltinTools() {
+  return useQuery<BuiltinTool[]>({
+    queryKey: ["tools", "builtins"],
+    queryFn: () => api("/api/tools/builtins"),
+  });
+}
+
+export function useWorkspaceTools() {
+  return useQuery<ToolOut[]>({
+    queryKey: ["workspace-tools"],
+    queryFn: () => api("/api/workspace/tools"),
+  });
+}
+
+export function useCreateWorkspaceTool() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { name: string; description: string; category: string; risk: string; config: Record<string, unknown> }) =>
+      api<ToolOut>("/api/workspace/tools", { method: "POST", body: JSON.stringify(body) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["workspace-tools"] }),
+  });
+}
+
+export function useDeleteWorkspaceTool() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (toolId: string) =>
+      api(`/api/workspace/tools/${toolId}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["workspace-tools"] }),
+  });
+}
+
+export function useBrainTools(slug: string) {
+  return useQuery<ToolOut[]>({
+    queryKey: ["brain-tools", slug],
+    queryFn: () => api(`/api/brains/${slug}/tools`),
+    enabled: !!slug,
+  });
+}
+
+export function useAttachTool(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (toolId: string) =>
+      api<ToolOut>(`/api/brains/${slug}/tools/${toolId}`, { method: "POST" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["brain-tools", slug] }),
+  });
+}
+
+export function useDetachTool(slug: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (toolId: string) =>
+      api(`/api/brains/${slug}/tools/${toolId}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["brain-tools", slug] }),
+  });
+}
+
+// ── Vault ──────────────────────────────────────────────────────────────────────
+
+export function useVaultSecrets() {
+  return useQuery<VaultSecretSummary[]>({
+    queryKey: ["vault-secrets"],
+    queryFn: () => api("/api/workspace/vault"),
+  });
+}
+
+export function useStoreSecret() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { name: string; value: string }) =>
+      api("/api/workspace/vault", { method: "POST", body: JSON.stringify(body) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["vault-secrets"] }),
+  });
+}
+
+export function useDeleteSecret() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) =>
+      api(`/api/workspace/vault/${encodeURIComponent(name)}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["vault-secrets"] }),
   });
 }

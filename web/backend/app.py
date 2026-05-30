@@ -8,7 +8,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from .config import settings
 from .db import init_db
 from . import sse
-from .routes import auth, brains, events, export, experts, interview, relationships, runs, settings as settings_routes, triggers, updates
+from .routes import auth, brains, events, export, experts, interview, relationships, runs, settings as settings_routes, tools, triggers, updates, vault
 
 
 def create_app() -> FastAPI:
@@ -41,6 +41,8 @@ def create_app() -> FastAPI:
     app.include_router(relationships.router)
     app.include_router(runs.router)
     app.include_router(triggers.router)
+    app.include_router(tools.router)
+    app.include_router(vault.router)
     app.include_router(events.router)
 
     # Serve built frontend from /static if it exists

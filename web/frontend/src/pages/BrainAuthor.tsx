@@ -7,6 +7,8 @@ import {
   useRemoveRelationship, useSemanticReview, useSyncEvals, useUnsyncedCount,
 } from "../api/hooks";
 import TriggersModal from "../components/TriggersModal";
+import ToolsModal from "../components/ToolsModal";
+import VaultModal from "../components/VaultModal";
 import { useBrains } from "../api/hooks";
 import AskExpertModal from "../components/AskExpertModal";
 import Avatar from "../components/Avatar";
@@ -53,6 +55,8 @@ export default function BrainAuthor() {
   const [newRelTarget, setNewRelTarget] = useState("");
   const [newRelType, setNewRelType] = useState("depends-on");
   const [showTriggers, setShowTriggers] = useState(false);
+  const [showTools, setShowTools] = useState(false);
+  const [showVault, setShowVault] = useState(false);
 
   if (!brain || !interview) {
     return (
@@ -118,6 +122,12 @@ export default function BrainAuthor() {
           )}
           <button className="btn btn-sm" onClick={() => setShowTriggers(true)}>
             Triggers
+          </button>
+          <button className="btn btn-sm" onClick={() => setShowTools(true)}>
+            Tools
+          </button>
+          <button className="btn btn-sm" onClick={() => setShowVault(true)}>
+            Vault
           </button>
           <Link to={`/brains/${slug}/run`} className="btn btn-sm btn-primary">
             <Icon name="spark" size={11} /> Run
@@ -351,6 +361,18 @@ export default function BrainAuthor() {
 
       {showTriggers && (
         <TriggersModal slug={slug!} onClose={() => setShowTriggers(false)} />
+      )}
+
+      {showTools && (
+        <ToolsModal
+          slug={slug!}
+          onClose={() => setShowTools(false)}
+          onOpenVault={() => setShowVault(true)}
+        />
+      )}
+
+      {showVault && (
+        <VaultModal onClose={() => setShowVault(false)} />
       )}
     </div>
   );

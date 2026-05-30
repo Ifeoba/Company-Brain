@@ -359,3 +359,20 @@ class TriggerCreate(BaseModel):
     name: str
     cron_expression: Optional[str] = None
     config: Optional[dict] = None
+
+
+# ── Tools ──────────────────────────────────────────────────────────────────────
+
+class ToolCreate(BaseModel):
+    name: str
+    description: str = ""
+    category: str = "http"
+    risk: str = "safe"  # safe | confirm | escalate
+    config: dict = {}
+
+
+# ── Vault ──────────────────────────────────────────────────────────────────────
+
+class VaultSecretSet(BaseModel):
+    name: str
+    value: str

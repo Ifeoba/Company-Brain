@@ -215,3 +215,29 @@ export interface TriggerOut {
   secret: string | null;
   webhook_url: string | null;
 }
+
+// ── Tools ─────────────────────────────────────────────────────────────────────
+
+export interface ToolOut {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  risk: "safe" | "confirm" | "escalate";
+  config: Record<string, unknown>;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface BuiltinTool {
+  name: string;
+  description: string;
+  category: string;
+  risk: string;
+  config_template: Record<string, unknown>;
+}
+
+export interface VaultSecretSummary {
+  name: string;
+  updated_at: string;
+}

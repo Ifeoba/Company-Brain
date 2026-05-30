@@ -551,6 +551,13 @@
 
 /* ── Triggers modal ──────────────────────────────────────── */
 .triggers-modal { width: 540px; max-width: 95vw; max-height: 85vh; overflow-y: auto; }
+.tools-modal { width: 560px; max-width: 95vw; max-height: 85vh; overflow-y: auto; }
+
+/* Selected tool row in picker */
+.tool-selected { border-color: var(--accent) !important; background: var(--accent-bg) !important; }
+
+/* Inline text link button */
+.btn-link { background: none; border: none; padding: 0; color: var(--accent); font-size: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 
 /* Trigger list (existing triggers) */
 .trigger-list { display: flex; flex-direction: column; gap: 4px; }

@@ -70,12 +70,104 @@ def _assemble_brain(brain_id: str, db) -> str:
     return "\n\n".join(parts)
 
 
+def _run_with_tools_anthropic(client, model, system, case_text, tools, db, run, ws_id):
+    """
+    Multi-turn Anthropic tool-use loop.
+    Returns (decision_text, tokens_in, tokens_out, awaiting_approval).
+    """
+    from .models import ToolCall
+    from .tool_executors import execute_tool, TOOL_SCHEMAS
+
+    anthropic_tools = []
+    for t in tools:
+        schema = TOOL_SCHEMAS.get(t.name)
+        if schema:
+            anthropic_tools.append({
+                "name": t.name,
+                "description": schema["description"],
+                "input_schema": schema["input_schema"],
+            })
+
+    messages = [{"role": "user", "content": "CASE:\n\n{}".format(case_text)}]
+    total_in = total_out = 0
+    final_text = ""
+
+    for _ in range(5):  # max 5 tool rounds
+        resp = client.messages.create(
+            model=model,
+            max_tokens=2048,
+            system=system,
+            messages=messages,
+            tools=anthropic_tools or [],
+        )
+        total_in += resp.usage.input_tokens
+        total_out += resp.usage.output_tokens
+
+        text_parts = [b.text for b in resp.content if b.type == "text"]
+        tool_blocks = [b for b in resp.content if b.type == "tool_use"]
+        if text_parts:
+            final_text = "\n".join(text_parts)
+
+        if resp.stop_reason == "end_turn" or not tool_blocks:
+            break
+
+        messages.append({"role": "assistant", "content": resp.content})
+
+        tool_results = []
+        needs_approval = False
+
+        for block in tool_blocks:
+            tool_model = next((t for t in tools if t.name == block.name), None)
+            if not tool_model:
+                tool_results.append({"type": "tool_result", "tool_use_id": block.id, "content": "Tool not found"})
+                continue
+
+            tc = ToolCall(
+                run_id=run.id,
+                tool_id=tool_model.id,
+                arguments=json.dumps(block.input),
+                status="pending_approval" if tool_model.risk in ("confirm", "escalate") else "approved",
+                requested_at=datetime.utcnow(),
+            )
+            db.add(tc)
+            db.flush()
+
+            if tool_model.risk == "confirm":
+                needs_approval = True
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": block.id,
+                    "content": "Pending human approval before execution.",
+                })
+            else:
+                try:
+                    result = execute_tool(db, tc, tool_model, run.workspace_id or run.user_id)
+                    tc.result = json.dumps(result)
+                    tc.status = "executed"
+                    tc.executed_at = datetime.utcnow()
+                    result_str = json.dumps(result)
+                except Exception as exc:
+                    tc.status = "failed"
+                    tc.error = str(exc)
+                    tc.executed_at = datetime.utcnow()
+                    result_str = "Error: {}".format(exc)
+                tool_results.append({"type": "tool_result", "tool_use_id": block.id, "content": result_str})
+
+        db.flush()
+        if needs_approval:
+            return final_text or "Awaiting approval for tool actions.", total_in, total_out, True
+
+        messages.append({"role": "user", "content": tool_results})
+
+    return final_text, total_in, total_out, False
+
+
 def execute_run(run_id: str, workspace_id: Optional[str] = None) -> None:
     """
     Core run logic. Called directly from BackgroundTasks or from the Celery task.
     Emits SSE events on status transitions.
     """
-    from .models import Run, User
+    from .models import BrainTool, Run, User
 
     with session_scope() as db:
         run = db.query(Run).filter_by(id=run_id).first()
@@ -105,20 +197,40 @@ def execute_run(run_id: str, workspace_id: Optional[str] = None) -> None:
             provider = user.llm_provider or "anthropic"
             model = PROVIDERS.get(provider, PROVIDERS["anthropic"])["default_model"]
 
+            # Load any tools attached to this brain
+            brain_tools = [
+                bt.tool for bt in db.query(BrainTool).filter_by(brain_id=run.brain_id).all()
+                if bt.tool.is_active
+            ]
+
             if provider == "anthropic":
                 import anthropic
                 from .crypto import decrypt_key
                 api_key = decrypt_key(user.encrypted_anthropic_key)
                 client = anthropic.Anthropic(api_key=api_key)
-                resp = client.messages.create(
-                    model=model,
-                    max_tokens=2048,
-                    system=system,
-                    messages=[{"role": "user", "content": "CASE:\n\n{}".format(run.case_text)}],
-                )
-                decision = resp.content[0].text
-                run.tokens_in = resp.usage.input_tokens
-                run.tokens_out = resp.usage.output_tokens
+
+                if brain_tools:
+                    decision, tokens_in, tokens_out, awaiting = _run_with_tools_anthropic(
+                        client, model, system, run.case_text, brain_tools, db, run, ws_id
+                    )
+                    run.tokens_in = tokens_in
+                    run.tokens_out = tokens_out
+                    if awaiting:
+                        run.decision_text = decision
+                        run.status = "awaiting_approval"
+                        run.completed_at = datetime.utcnow()
+                        sse.publish(ws_id, {"type": "run.awaiting_approval", "run_id": run_id})
+                        return
+                else:
+                    resp = client.messages.create(
+                        model=model,
+                        max_tokens=2048,
+                        system=system,
+                        messages=[{"role": "user", "content": "CASE:\n\n{}".format(run.case_text)}],
+                    )
+                    decision = resp.content[0].text
+                    run.tokens_in = resp.usage.input_tokens
+                    run.tokens_out = resp.usage.output_tokens
             else:
                 from .llm_client import call_llm
                 decision = call_llm(
