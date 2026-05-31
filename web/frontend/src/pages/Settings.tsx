@@ -1,22 +1,29 @@
 import { useState } from "react";
-import { useDeleteApiKey, useMe, useSetApiKey } from "../api/hooks";
+import { useDeleteApiKey, useMe, useProviders, useSetApiKey } from "../api/hooks";
 import AppTopbar from "../components/Layout";
 import Icon from "../components/Icon";
 
 export default function Settings() {
   const { data: user } = useMe();
+  const { data: providers = [] } = useProviders();
   const setKey = useSetApiKey();
   const deleteKey = useDeleteApiKey();
+
+  const currentProvider = user?.llm_provider || "anthropic";
+  const [selectedProvider, setSelectedProvider] = useState("");
+  const activeProvider = selectedProvider || currentProvider;
 
   const [apiKey, setApiKey] = useState("");
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
 
+  const chosen = providers.find((p) => p.id === activeProvider);
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     try {
-      await setKey.mutateAsync({ provider: "anthropic", api_key: apiKey });
+      await setKey.mutateAsync({ provider: activeProvider, api_key: apiKey });
       setApiKey("");
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -45,13 +52,42 @@ export default function Settings() {
           <div className="settings-section">
             <h3>
               <Icon name="key" size={14} />
-              AI assistant
+              AI provider
             </h3>
             <div className="desc">
-              Add your Anthropic API key to enable AI-powered drafting and suggestions. Your key is stored securely and never shared.
+              Choose your AI provider and paste an API key. Your key is encrypted and never shared.
             </div>
 
-            {user?.has_api_key && (
+            {/* Provider selector */}
+            {providers.length > 0 && (
+              <div className="provider-grid">
+                {providers.map((p) => {
+                  const isActive = p.id === activeProvider;
+                  const isCurrent = p.id === currentProvider && user?.has_api_key;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      className={"provider-card" + (isActive ? " selected" : "")}
+                      onClick={() => {
+                        setSelectedProvider(p.id);
+                        setApiKey("");
+                        setError("");
+                        setSaved(false);
+                      }}
+                    >
+                      <span className="provider-name">{p.name}</span>
+                      {isCurrent && (
+                        <span className="provider-badge">connected</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Key status for currently connected provider */}
+            {user?.has_api_key && currentProvider === activeProvider && (
               <div className="status-line" style={{ marginBottom: 12 }}>
                 <span className="ok">● connected</span>
                 {" · "}
@@ -66,13 +102,18 @@ export default function Settings() {
               </div>
             )}
 
+            {/* Key input */}
             <form onSubmit={handleSave}>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 <div className="field-row">
                   <input
                     type="password"
                     className="input key-input"
-                    placeholder={user?.has_api_key ? "sk-ant-… (enter new key to replace)" : "sk-ant-…"}
+                    placeholder={
+                      user?.has_api_key && currentProvider === activeProvider
+                        ? `${chosen?.key_hint ?? "…"} (enter new key to replace)`
+                        : chosen?.key_hint ?? "Paste API key…"
+                    }
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
                   />
@@ -84,12 +125,14 @@ export default function Settings() {
                     {setKey.isPending ? "Saving…" : "Save"}
                   </button>
                 </div>
-                <div style={{ fontSize: 12, color: "var(--dim)" }}>
-                  Get a key at{" "}
-                  <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer">
-                    console.anthropic.com →
-                  </a>
-                </div>
+                {chosen && (
+                  <div style={{ fontSize: 12, color: "var(--dim)" }}>
+                    Get a key at{" "}
+                    <a href={chosen.key_url} target="_blank" rel="noopener noreferrer">
+                      {chosen.key_url.replace(/^https?:\/\//, "")} →
+                    </a>
+                  </div>
+                )}
               </div>
             </form>
 
@@ -100,8 +143,9 @@ export default function Settings() {
           <div className="settings-section">
             <h3>Email notifications</h3>
             <div className="desc">
-              When you send a question to an expert, it arrives by email from your configured sender address.
-              Ask your workspace admin to set this up, or add a <code className="mono">RESEND_API_KEY</code> to your environment.
+              When you send a question to an expert, it arrives by email. Add your Resend API key
+              via the <a href="/insights">Credentials</a> page — store it as{" "}
+              <code className="mono">RESEND_API_KEY</code>.
             </div>
           </div>
 
