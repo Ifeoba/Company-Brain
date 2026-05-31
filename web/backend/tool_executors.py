@@ -72,16 +72,17 @@ BUILTIN_CATALOG = [
         "category": "messaging",
         "risk": "confirm",
         "config_template": {
-            "vault_key": "SLACK_BOT_TOKEN",
+            "credential_name": "SLACK_BOT_TOKEN",
             "default_channel": "#general",
         },
     },
     {
         "name": "send_email",
-        "description": "Send an email to anyone. Works out of the box if you've connected Resend.",
+        "description": "Send an email to anyone. Save your Resend API key under Credentials first.",
         "category": "email",
         "risk": "confirm",
         "config_template": {
+            "credential_name": "RESEND_API_KEY",
             "from_name": "Company Brain",
             "from_email": "",
         },
@@ -122,12 +123,13 @@ def _send_slack_message(db, workspace_id: str, config: dict, args: dict) -> dict
 
     channel = args.get("channel") or config.get("default_channel", "#general")
     text = args["text"]
-    vault_key = config.get("vault_key", "SLACK_BOT_TOKEN")
+    # Support both the new credential_name field and the legacy vault_key field.
+    credential_name = config.get("credential_name") or config.get("vault_key", "SLACK_BOT_TOKEN")
 
-    credential = vault_module.get_plaintext(db, workspace_id, vault_key)
+    credential = vault_module.get_plaintext(db, workspace_id, credential_name)
     if not credential:
         raise ValueError(
-            "Slack credential not found in Vault. Add secret '{}' via the Vault manager.".format(vault_key)
+            "Slack credential not found in Vault. Add secret '{}' via the Credentials page.".format(credential_name)
         )
 
     if credential.startswith("https://hooks.slack.com/"):
@@ -154,19 +156,26 @@ def _send_slack_message(db, workspace_id: str, config: dict, args: dict) -> dict
 
 
 def _send_email(db, workspace_id: str, config: dict, args: dict) -> dict:
-    from .config import settings
+    from . import vault as vault_module
 
     to = args["to"]
     subject = args["subject"]
     body = args["body"]
     from_name = config.get("from_name", "Company Brain")
-    from_email = config.get("from_email") or settings.resend_from_email
+    from_email = config.get("from_email") or ""
+    if not from_email:
+        from .config import settings
+        from_email = settings.resend_from_email
 
-    if not settings.resend_api_key:
-        raise ValueError("RESEND_API_KEY is not configured in environment settings.")
+    credential_name = config.get("credential_name", "RESEND_API_KEY")
+    api_key = vault_module.get_plaintext(db, workspace_id, credential_name)
+    if not api_key:
+        raise ValueError(
+            "Resend API key not found in Vault. Add secret '{}' via the Credentials page.".format(credential_name)
+        )
 
     import resend
-    resend.api_key = settings.resend_api_key
+    resend.api_key = api_key
     result = resend.Emails.send({
         "from": "{} <{}>".format(from_name, from_email),
         "to": [to],
