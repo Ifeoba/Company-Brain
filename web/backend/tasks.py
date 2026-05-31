@@ -256,7 +256,7 @@ def execute_run(run_id: str, workspace_id: Optional[str] = None) -> None:
             if provider == "anthropic":
                 import anthropic
                 from .crypto import decrypt_key
-                api_key = decrypt_key(user.encrypted_anthropic_key)
+                api_key = decrypt_key(user.encrypted_anthropic_key).decode()
                 client = anthropic.Anthropic(api_key=api_key)
 
                 if brain_tools:
@@ -429,7 +429,7 @@ def resume_run(run_id: str) -> None:
             if provider == "anthropic":
                 import anthropic
                 from .crypto import decrypt_key
-                api_key = decrypt_key(user.encrypted_anthropic_key)
+                api_key = decrypt_key(user.encrypted_anthropic_key).decode()
                 client = anthropic.Anthropic(api_key=api_key)
                 resp = client.messages.create(
                     model=model,
@@ -651,7 +651,7 @@ def run_maintainer_for_brain(brain_id: str) -> None:
             from .llm_client import PROVIDERS
             from .crypto import decrypt_key
             import anthropic as _anthropic
-            api_key = decrypt_key(owner.encrypted_anthropic_key)
+            api_key = decrypt_key(owner.encrypted_anthropic_key).decode()
             client = _anthropic.Anthropic(api_key=api_key)
             provider = owner.llm_provider or "anthropic"
             model = PROVIDERS.get(provider, PROVIDERS["anthropic"])["default_model"]

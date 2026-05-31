@@ -47,7 +47,7 @@ def call_llm(user: "User", system: str, messages: list[dict], max_tokens: int = 
     if not user.encrypted_anthropic_key:
         raise ValueError("No API key configured. Add one in Settings.")
 
-    api_key = decrypt_key(user.encrypted_anthropic_key)
+    api_key = decrypt_key(user.encrypted_anthropic_key).decode()
     provider = user.llm_provider or "anthropic"
     model = PROVIDERS.get(provider, PROVIDERS["anthropic"])["default_model"]
 

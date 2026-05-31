@@ -9,9 +9,9 @@ def _fernet() -> Fernet:
     return Fernet(key.encode() if isinstance(key, str) else key)
 
 
-def encrypt_key(plaintext: str) -> bytes:
-    return _fernet().encrypt(plaintext.encode())
+def encrypt_key(plaintext: bytes) -> bytes:
+    return _fernet().encrypt(plaintext)
 
 
-def decrypt_key(ciphertext: bytes) -> str:
-    return _fernet().decrypt(ciphertext).decode()
+def decrypt_key(ciphertext: bytes) -> bytes:
+    return _fernet().decrypt(ciphertext)

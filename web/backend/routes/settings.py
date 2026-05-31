@@ -23,7 +23,7 @@ def list_providers():
 def set_api_key(body: SetApiKeyRequest, user: User = Depends(current_user), db: Session = Depends(get_db)):
     if body.provider not in PROVIDERS:
         raise HTTPException(status_code=400, detail=f"Unknown provider: {body.provider}")
-    user.encrypted_anthropic_key = encrypt_key(body.api_key)
+    user.encrypted_anthropic_key = encrypt_key(body.api_key.encode())
     user.llm_provider = body.provider
     db.commit()
     return {"ok": True}
@@ -39,7 +39,7 @@ def delete_api_key(user: User = Depends(current_user), db: Session = Depends(get
 # Legacy endpoints — kept for backwards compatibility
 @router.put("/api/me/anthropic-key")
 def set_anthropic_key_legacy(body: SetApiKeyRequest, user: User = Depends(current_user), db: Session = Depends(get_db)):
-    user.encrypted_anthropic_key = encrypt_key(body.api_key)
+    user.encrypted_anthropic_key = encrypt_key(body.api_key.encode())
     user.llm_provider = body.provider if body.provider in PROVIDERS else "anthropic"
     db.commit()
     return {"ok": True}

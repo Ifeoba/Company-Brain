@@ -43,7 +43,7 @@ def test_generate_no_key(authed_client):
 def test_generate_with_mock_claude(authed_client, db_session):
     from backend.crypto import encrypt_key
     user = authed_client._user
-    user.encrypted_anthropic_key = encrypt_key("sk-ant-test")
+    user.encrypted_anthropic_key = encrypt_key(b"sk-ant-test")
     db_session.commit()
 
     authed_client.post("/api/brains", json={"name": "Claude Brain"})
