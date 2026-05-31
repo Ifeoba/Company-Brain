@@ -1,4 +1,6 @@
 import secrets
+import uuid
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
@@ -9,7 +11,7 @@ from ..auth import (
 )
 from ..config import settings
 from ..db import get_db
-from ..models import User
+from ..models import User, Workspace, WorkspaceMember
 from ..schemas import CSRFToken, UserOut
 
 router = APIRouter()
@@ -35,6 +37,24 @@ def github_callback(request: Request, code: str, state: str, db: Session = Depen
         raise HTTPException(status_code=400, detail=str(e))
 
     user = upsert_user(db, github_user)
+
+    # Create workspace on first sign-up. Idempotent: skips if one already exists.
+    if not db.query(Workspace).filter_by(owner_id=user.id).first():
+        ws = Workspace(
+            id=str(uuid.uuid4()),
+            name="{}'s workspace".format(user.github_username),
+            owner_id=user.id,
+            created_at=datetime.utcnow(),
+        )
+        db.add(ws)
+        db.flush()
+        db.add(WorkspaceMember(
+            workspace_id=ws.id,
+            user_id=user.id,
+            role="owner",
+        ))
+        db.commit()
+
     request.session["user_id"] = user.id
     request.session["csrf_token"] = secrets.token_urlsafe(32)
 
