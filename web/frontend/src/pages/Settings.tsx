@@ -1,11 +1,38 @@
 import { useState } from "react";
-import { useDeleteApiKey, useMe, useProviders, useSetApiKey } from "../api/hooks";
+import { useDeleteApiKey, useMe, useSetApiKey } from "../api/hooks";
 import AppTopbar from "../components/Layout";
 import Icon from "../components/Icon";
 
+// Static — matches llm_client.py PROVIDERS. No API call needed.
+const PROVIDERS = [
+  {
+    id: "anthropic",
+    name: "Claude (Anthropic)",
+    key_hint: "sk-ant-…",
+    key_url: "https://console.anthropic.com/",
+  },
+  {
+    id: "openai",
+    name: "ChatGPT (OpenAI)",
+    key_hint: "sk-…",
+    key_url: "https://platform.openai.com/api-keys",
+  },
+  {
+    id: "gemini",
+    name: "Gemini (Google)",
+    key_hint: "AIza…",
+    key_url: "https://aistudio.google.com/app/apikey",
+  },
+  {
+    id: "groq",
+    name: "Groq",
+    key_hint: "gsk_…",
+    key_url: "https://console.groq.com/keys",
+  },
+];
+
 export default function Settings() {
   const { data: user } = useMe();
-  const { data: providers = [] } = useProviders();
   const setKey = useSetApiKey();
   const deleteKey = useDeleteApiKey();
 
@@ -17,7 +44,7 @@ export default function Settings() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
 
-  const chosen = providers.find((p) => p.id === activeProvider);
+  const chosen = PROVIDERS.find((p) => p.id === activeProvider);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -58,35 +85,29 @@ export default function Settings() {
               Choose your AI provider and paste an API key. Your key is encrypted and never shared.
             </div>
 
-            {/* Provider selector */}
-            {providers.length > 0 && (
-              <div className="provider-grid">
-                {providers.map((p) => {
-                  const isActive = p.id === activeProvider;
-                  const isCurrent = p.id === currentProvider && user?.has_api_key;
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      className={"provider-card" + (isActive ? " selected" : "")}
-                      onClick={() => {
-                        setSelectedProvider(p.id);
-                        setApiKey("");
-                        setError("");
-                        setSaved(false);
-                      }}
-                    >
-                      <span className="provider-name">{p.name}</span>
-                      {isCurrent && (
-                        <span className="provider-badge">connected</span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+            <div className="provider-grid">
+              {PROVIDERS.map((p) => {
+                const isActive = p.id === activeProvider;
+                const isCurrent = p.id === currentProvider && user?.has_api_key;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className={"provider-card" + (isActive ? " selected" : "")}
+                    onClick={() => {
+                      setSelectedProvider(p.id);
+                      setApiKey("");
+                      setError("");
+                      setSaved(false);
+                    }}
+                  >
+                    <span className="provider-name">{p.name}</span>
+                    {isCurrent && <span className="provider-badge">connected</span>}
+                  </button>
+                );
+              })}
+            </div>
 
-            {/* Key status for currently connected provider */}
             {user?.has_api_key && currentProvider === activeProvider && (
               <div className="status-line" style={{ marginBottom: 12 }}>
                 <span className="ok">● connected</span>
@@ -102,7 +123,6 @@ export default function Settings() {
               </div>
             )}
 
-            {/* Key input */}
             <form onSubmit={handleSave}>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 <div className="field-row">
