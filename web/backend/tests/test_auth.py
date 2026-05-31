@@ -8,7 +8,7 @@ def test_me_authenticated(authed_client):
     assert resp.status_code == 200
     data = resp.json()
     assert data["github_username"] == "testuser"
-    assert data["has_anthropic_key"] is False
+    assert data["has_api_key"] is False
 
 
 def test_csrf_token(client):

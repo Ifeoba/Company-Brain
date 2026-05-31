@@ -86,6 +86,7 @@ def integrate_update(
         for f in files
     )
     raw = call_llm(
+        db,
         user,
         "You select which brain knowledge-base files should be updated with new information. Respond with ONLY a JSON array of filename strings, e.g. [\"overview.md\"].",
         [{
@@ -100,7 +101,7 @@ def integrate_update(
         }],
         max_tokens=256,
     )
-    match = re.search(r"\[.*?\]", raw, re.DOTALL)
+    match = re.search(r"\[.*?\]", raw["content"], re.DOTALL)
     try:
         target_names = json.loads(match.group()) if match else []
     except Exception:
@@ -114,6 +115,7 @@ def integrate_update(
         if bf.filename not in target_names:
             continue
         bf.content = call_llm(
+            db,
             user,
             (
                 "You update a knowledge-base file to naturally incorporate new domain expert knowledge. "
@@ -131,7 +133,7 @@ def integrate_update(
                 ),
             }],
             max_tokens=4096,
-        )
+        )["content"]
         bf.updated_at = now
         updated.append(bf.filename)
 

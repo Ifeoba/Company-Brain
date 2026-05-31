@@ -17,6 +17,7 @@ dependencies = [
     "cryptography>=42",
     "anthropic>=0.40",
     "openai>=1.0",
+    "litellm>=1.50.0",
     "python-multipart>=0.0.9",
     "itsdangerous>=2.1",
 ]

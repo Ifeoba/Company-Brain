@@ -41,22 +41,22 @@ def test_generate_no_key(authed_client):
 
 
 def test_generate_with_mock_claude(authed_client, db_session):
-    from backend.crypto import encrypt_key
-    user = authed_client._user
-    user.encrypted_anthropic_key = encrypt_key(b"sk-ant-test")
-    db_session.commit()
-
     authed_client.post("/api/brains", json={"name": "Claude Brain"})
     authed_client.post(
         "/api/brains/claude-brain/interview/answer",
         json={"step": 1, "question_key": "service_description", "answer_text": "A test service"},
     )
 
-    mock_response = MagicMock()
-    mock_response.content = [MagicMock(text="# Generated content\n\nReal output here.")]
+    mock_result = {
+        "content": "# Generated content\n\nReal output here.",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage": {"prompt_tokens": 10, "completion_tokens": 20},
+        "provider": "anthropic",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+    }
 
-    with patch("backend.routes.interview.get_client") as mock_client:
-        mock_client.return_value.messages.create.return_value = mock_response
+    with patch("backend.routes.interview.call_llm", return_value=mock_result):
         resp = authed_client.post(
             "/api/brains/claude-brain/interview/generate",
             json={"step": 1, "filename": "01-service-definition.md"},

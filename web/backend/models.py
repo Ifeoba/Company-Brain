@@ -28,6 +28,25 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     brains = relationship("Brain", back_populates="owner", cascade="all, delete-orphan")
+    llm_credentials = relationship("UserLLMCredential", back_populates="user", cascade="all, delete-orphan")
+
+
+class UserLLMCredential(Base):
+    """Per-provider encrypted API keys for each user."""
+    __tablename__ = "user_llm_credentials"
+
+    id = Column(String(36), primary_key=True, default=_uuid)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    provider = Column(String(32), nullable=False)
+    encrypted_api_key = Column(LargeBinary, nullable=False)
+    label = Column(String(128), default="")
+    is_active = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (UniqueConstraint("user_id", "provider", name="uq_user_llm_cred"),)
+
+    user = relationship("User", back_populates="llm_credentials")
 
 
 class Workspace(Base):

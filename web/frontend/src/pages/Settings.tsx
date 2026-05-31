@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { useDeleteApiKey, useMe, useSetApiKey } from "../api/hooks";
+import {
+  useActivateLLMCredential, useDeleteLLMCredential, useLLMCredentials,
+  useMe, useSaveLLMCredential, useTestLLMCredential,
+} from "../api/hooks";
 import AppTopbar from "../components/Layout";
 import Icon from "../components/Icon";
 
-// Static — matches llm_client.py PROVIDERS. No API call needed.
 const PROVIDERS = [
   {
     id: "anthropic",
@@ -33,24 +35,41 @@ const PROVIDERS = [
 
 export default function Settings() {
   const { data: user } = useMe();
-  const setKey = useSetApiKey();
-  const deleteKey = useDeleteApiKey();
+  const { data: credentials = [] } = useLLMCredentials();
+  const saveKey = useSaveLLMCredential();
+  const deleteKey = useDeleteLLMCredential();
+  const testKey = useTestLLMCredential();
+  const activateKey = useActivateLLMCredential();
 
-  const currentProvider = user?.llm_provider || "anthropic";
+  const activeProvider = user?.llm_provider || "anthropic";
   const [selectedProvider, setSelectedProvider] = useState("");
-  const activeProvider = selectedProvider || currentProvider;
+  const currentProvider = selectedProvider || activeProvider;
 
   const [apiKey, setApiKey] = useState("");
   const [saved, setSaved] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [error, setError] = useState("");
 
-  const chosen = PROVIDERS.find((p) => p.id === activeProvider);
+  const chosen = PROVIDERS.find((p) => p.id === currentProvider);
+
+  function credFor(id: string) {
+    return credentials.find((c) => c.provider === id);
+  }
+
+  function handleSelectProvider(id: string) {
+    setSelectedProvider(id);
+    setApiKey("");
+    setError("");
+    setSaved(false);
+    setTestResult(null);
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setTestResult(null);
     try {
-      await setKey.mutateAsync({ provider: activeProvider, api_key: apiKey });
+      await saveKey.mutateAsync({ provider: currentProvider, api_key: apiKey });
       setApiKey("");
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -59,10 +78,36 @@ export default function Settings() {
     }
   }
 
-  async function handleDelete() {
-    if (!confirm("Remove your API key?")) return;
-    await deleteKey.mutateAsync();
+  async function handleTest() {
+    setError("");
+    setTestResult(null);
+    try {
+      const res = await testKey.mutateAsync({
+        provider: currentProvider,
+        api_key: apiKey || undefined,
+      }) as { ok: boolean; content?: string; error?: string };
+      if (res.ok) {
+        setTestResult({ ok: true, msg: "Connection successful." });
+      } else {
+        setTestResult({ ok: false, msg: res.error || "Connection failed." });
+      }
+    } catch (err: unknown) {
+      setTestResult({ ok: false, msg: err instanceof Error ? err.message : "Test failed" });
+    }
   }
+
+  async function handleDelete(provider: string) {
+    if (!confirm("Remove API key for this provider?")) return;
+    await deleteKey.mutateAsync(provider);
+  }
+
+  async function handleActivate(provider: string) {
+    await activateKey.mutateAsync(provider);
+  }
+
+  const cred = credFor(currentProvider);
+  const isConnected = !!cred;
+  const isActive = currentProvider === activeProvider && (isConnected || !!user?.has_api_key);
 
   return (
     <div className="settings-shell">
@@ -82,39 +127,52 @@ export default function Settings() {
               AI provider
             </h3>
             <div className="desc">
-              Choose your AI provider and paste an API key. Your key is encrypted and never shared.
+              Save an API key for each provider you want to use. The active provider is used for all AI features.
             </div>
 
             <div className="provider-grid">
               {PROVIDERS.map((p) => {
-                const isActive = p.id === activeProvider;
-                const isCurrent = p.id === currentProvider && user?.has_api_key;
+                const isSelected = p.id === currentProvider;
+                const pCred = credFor(p.id);
+                const pConnected = !!pCred;
+                const pActive = p.id === activeProvider && (pConnected || (p.id === "anthropic" && !!user?.has_api_key));
                 return (
                   <button
                     key={p.id}
                     type="button"
-                    className={"provider-card" + (isActive ? " selected" : "")}
-                    onClick={() => {
-                      setSelectedProvider(p.id);
-                      setApiKey("");
-                      setError("");
-                      setSaved(false);
-                    }}
+                    className={"provider-card" + (isSelected ? " selected" : "")}
+                    onClick={() => handleSelectProvider(p.id)}
                   >
                     <span className="provider-name">{p.name}</span>
-                    {isCurrent && <span className="provider-badge">connected</span>}
+                    <span style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                      {pConnected && <span className="provider-badge">connected</span>}
+                      {pActive && <span className="provider-badge active-badge">active</span>}
+                    </span>
                   </button>
                 );
               })}
             </div>
 
-            {user?.has_api_key && currentProvider === activeProvider && (
+            {isConnected && (
               <div className="status-line" style={{ marginBottom: 12 }}>
                 <span className="ok">● connected</span>
+                {!isActive && (
+                  <>
+                    {" · "}
+                    <button
+                      className="btn btn-sm"
+                      onClick={() => handleActivate(currentProvider)}
+                      disabled={activateKey.isPending}
+                      style={{ display: "inline", padding: 0, border: "none", background: "none", fontSize: "inherit", color: "var(--accent)", cursor: "pointer" }}
+                    >
+                      {activateKey.isPending ? "Activating…" : "Set as active"}
+                    </button>
+                  </>
+                )}
                 {" · "}
                 <button
                   className="btn btn-sm"
-                  onClick={handleDelete}
+                  onClick={() => handleDelete(currentProvider)}
                   disabled={deleteKey.isPending}
                   style={{ display: "inline", padding: 0, border: "none", background: "none", fontSize: "inherit", color: "var(--bad)", cursor: "pointer" }}
                 >
@@ -130,7 +188,7 @@ export default function Settings() {
                     type="password"
                     className="input key-input"
                     placeholder={
-                      user?.has_api_key && currentProvider === activeProvider
+                      isConnected
                         ? `${chosen?.key_hint ?? "…"} (enter new key to replace)`
                         : chosen?.key_hint ?? "Paste API key…"
                     }
@@ -138,11 +196,20 @@ export default function Settings() {
                     onChange={(e) => setApiKey(e.target.value)}
                   />
                   <button
+                    type="button"
+                    className="btn"
+                    onClick={handleTest}
+                    disabled={testKey.isPending || (!apiKey && !isConnected)}
+                    title={!apiKey && !isConnected ? "Paste a key first" : "Test connection"}
+                  >
+                    {testKey.isPending ? "Testing…" : "Test"}
+                  </button>
+                  <button
                     type="submit"
                     className="btn btn-primary"
-                    disabled={setKey.isPending || !apiKey}
+                    disabled={saveKey.isPending || !apiKey}
                   >
-                    {setKey.isPending ? "Saving…" : "Save"}
+                    {saveKey.isPending ? "Saving…" : "Save"}
                   </button>
                 </div>
                 {chosen && (
@@ -158,6 +225,11 @@ export default function Settings() {
 
             {error && <div className="status-line" style={{ color: "var(--bad)", marginTop: 8 }}>{error}</div>}
             {saved && <div className="status-line" style={{ color: "var(--ok)", marginTop: 8 }}>Saved.</div>}
+            {testResult && (
+              <div className="status-line" style={{ color: testResult.ok ? "var(--ok)" : "var(--bad)", marginTop: 8 }}>
+                {testResult.ok ? "✓ " : "✗ "}{testResult.msg}
+              </div>
+            )}
           </div>
 
           <div className="settings-section">

@@ -68,13 +68,16 @@ def logout(request: Request):
 
 
 @router.get("/api/me", response_model=UserOut)
-def me(user: User = Depends(current_user)):
+def me(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    from ..models import UserLLMCredential
+    has_cred = db.query(UserLLMCredential).filter_by(user_id=user.id).count() > 0
+    has_api_key = user.encrypted_anthropic_key is not None or has_cred
     return UserOut(
         id=user.id,
         github_username=user.github_username,
         email=user.email,
         avatar_url=user.avatar_url,
-        has_api_key=user.encrypted_anthropic_key is not None,
+        has_api_key=has_api_key,
         llm_provider=user.llm_provider or "anthropic",
         created_at=user.created_at,
     )

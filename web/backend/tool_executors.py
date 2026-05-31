@@ -19,7 +19,7 @@ import httpx
 TOOL_SCHEMAS: dict[str, dict] = {
     "send_slack_message": {
         "description": "Post a message to a Slack channel. Use for alerts and notifications.",
-        "input_schema": {
+        "parameters": {
             "type": "object",
             "properties": {
                 "channel": {
@@ -36,7 +36,7 @@ TOOL_SCHEMAS: dict[str, dict] = {
     },
     "send_email": {
         "description": "Send an email notification via Resend.",
-        "input_schema": {
+        "parameters": {
             "type": "object",
             "properties": {
                 "to": {"type": "string", "description": "Recipient email address"},
@@ -48,7 +48,7 @@ TOOL_SCHEMAS: dict[str, dict] = {
     },
     "http_get": {
         "description": "Make an HTTP GET request to an external URL and return the response.",
-        "input_schema": {
+        "parameters": {
             "type": "object",
             "properties": {
                 "url": {"type": "string", "description": "Full URL to fetch"},

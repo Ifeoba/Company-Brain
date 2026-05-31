@@ -128,12 +128,14 @@ def generate(slug: str, body: GenerateRequest, user: User = Depends(current_user
 
     json_mode = body.filename.endswith(".json")
     system = _SYSTEM_PROMPT_JSON if json_mode else _SYSTEM_PROMPT
-    content = call_llm(
+    raw = call_llm(
+        db,
         user,
         system,
         [{"role": "user", "content": f"Template for {body.filename}:\n\n{template}\n\n---\nUser's answers:\n\n{answers_text}"}],
         max_tokens=4096,
     )
+    content = raw["content"]
 
     now = datetime.utcnow()
     bf = db.query(BrainFile).filter_by(brain_id=brain.id, filename=body.filename).first()

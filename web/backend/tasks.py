@@ -85,26 +85,30 @@ def _assemble_brain(brain_id: str, db) -> str:
     return "\n\n".join(parts)
 
 
-def _run_with_tools_anthropic(client, model, system, case_text, tools, db, run, ws_id, step_counter=None):
+def _run_with_tools(db, user, system, case_text, tools, run, ws_id, step_counter=None):
     """
-    Multi-turn Anthropic tool-use loop.
+    Multi-turn tool-use loop via LiteLLM (OpenAI-canonical format).
     Returns (decision_text, tokens_in, tokens_out, awaiting_approval).
     step_counter is a mutable [int] shared with the caller so step indices are contiguous.
     """
-    from .models import ToolCall
+    from .models import ToolCall as ToolCallModel
     from .tool_executors import execute_tool, TOOL_SCHEMAS
+    from .llm_client import call_llm
 
     if step_counter is None:
         step_counter = [0]
 
-    anthropic_tools = []
+    oai_tools = []
     for t in tools:
         schema = TOOL_SCHEMAS.get(t.name)
         if schema:
-            anthropic_tools.append({
-                "name": t.name,
-                "description": schema["description"],
-                "input_schema": schema["input_schema"],
+            oai_tools.append({
+                "type": "function",
+                "function": {
+                    "name": t.name,
+                    "description": schema["description"],
+                    "parameters": schema["parameters"],
+                },
             })
 
     messages = [{"role": "user", "content": "CASE:\n\n{}".format(case_text)}]
@@ -112,44 +116,60 @@ def _run_with_tools_anthropic(client, model, system, case_text, tools, db, run, 
     final_text = ""
 
     for _ in range(5):  # max 5 tool rounds
-        resp = client.messages.create(
-            model=model,
+        result = call_llm(
+            db, user, system, messages,
+            tools=oai_tools if oai_tools else None,
             max_tokens=2048,
-            system=system,
-            messages=messages,
-            tools=anthropic_tools or [],
         )
-        total_in += resp.usage.input_tokens
-        total_out += resp.usage.output_tokens
+        total_in += result["usage"]["prompt_tokens"]
+        total_out += result["usage"]["completion_tokens"]
 
-        text_parts = [b.text for b in resp.content if b.type == "text"]
-        tool_blocks = [b for b in resp.content if b.type == "tool_use"]
-        if text_parts:
-            final_text = "\n".join(text_parts)
+        content = result["content"] or ""
+        tool_calls = result["tool_calls"]
+
+        if content:
+            final_text = content
             _add_step(db, run.id, step_counter, "thinking", final_text)
 
-        if resp.stop_reason == "end_turn" or not tool_blocks:
+        if result["finish_reason"] != "tool_calls" or not tool_calls:
             break
 
-        messages.append({"role": "assistant", "content": resp.content})
+        # Append assistant message with tool_calls for the next round
+        messages.append({
+            "role": "assistant",
+            "content": content,
+            "tool_calls": tool_calls,
+        })
 
-        tool_results = []
+        tool_result_messages = []
         needs_approval = False
 
-        for block in tool_blocks:
-            tool_model = next((t for t in tools if t.name == block.name), None)
+        for tc_data in tool_calls:
+            tc_name = tc_data["function"]["name"]
+            tc_id = tc_data["id"]
+            tc_args_str = tc_data["function"]["arguments"]
+            try:
+                tc_args = json.loads(tc_args_str)
+            except Exception:
+                tc_args = {}
+
+            tool_model = next((t for t in tools if t.name == tc_name), None)
             if not tool_model:
-                tool_results.append({"type": "tool_result", "tool_use_id": block.id, "content": "Tool not found"})
+                tool_result_messages.append({
+                    "role": "tool",
+                    "tool_call_id": tc_id,
+                    "content": "Tool not found",
+                })
                 continue
 
             _add_step(db, run.id, step_counter, "tool_call",
-                      "{}({})".format(block.name, json.dumps(block.input)[:300]),
-                      {"tool_name": block.name, "arguments": block.input})
+                      "{}({})".format(tc_name, json.dumps(tc_args)[:300]),
+                      {"tool_name": tc_name, "arguments": tc_args})
 
-            tc = ToolCall(
+            tc = ToolCallModel(
                 run_id=run.id,
                 tool_id=tool_model.id,
-                arguments=json.dumps(block.input),
+                arguments=tc_args_str,
                 status="pending_approval" if tool_model.risk in ("confirm", "escalate") else "approved",
                 requested_at=datetime.utcnow(),
             )
@@ -163,7 +183,7 @@ def _run_with_tools_anthropic(client, model, system, case_text, tools, db, run, 
                     esc = Escalation(
                         run_id=run.id,
                         workspace_id=run.workspace_id or ws_id,
-                        reason="Tool '{}' requires team review before execution".format(tool_model.name),
+                        reason="Tool '{}' requires team review before execution".format(tc_name),
                         guardrail_cited="escalate-risk tool",
                         tool_call_id=tc.id,
                         status="pending",
@@ -172,26 +192,26 @@ def _run_with_tools_anthropic(client, model, system, case_text, tools, db, run, 
                     db.add(esc)
                     db.flush()
                     _add_step(db, run.id, step_counter, "guardrail_blocked",
-                              "Tool '{}' escalated for team review".format(tool_model.name),
-                              {"tool_name": tool_model.name, "tool_call_id": tc.id})
+                              "Tool '{}' escalated for team review".format(tc_name),
+                              {"tool_name": tc_name, "tool_call_id": tc.id})
                 _add_step(db, run.id, step_counter, "approval_requested",
-                          "Awaiting approval for: {}".format(tool_model.name),
-                          {"tool_name": tool_model.name, "tool_call_id": tc.id})
-                tool_results.append({
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
+                          "Awaiting approval for: {}".format(tc_name),
+                          {"tool_name": tc_name, "tool_call_id": tc.id})
+                tool_result_messages.append({
+                    "role": "tool",
+                    "tool_call_id": tc_id,
                     "content": "Pending human approval before execution.",
                 })
             else:
                 try:
-                    result = execute_tool(db, tc, tool_model, run.workspace_id or run.user_id)
-                    tc.result = json.dumps(result)
+                    exec_result = execute_tool(db, tc, tool_model, run.workspace_id or run.user_id)
+                    tc.result = json.dumps(exec_result)
                     tc.status = "executed"
                     tc.executed_at = datetime.utcnow()
-                    result_str = json.dumps(result)
+                    result_str = json.dumps(exec_result)
                     _add_step(db, run.id, step_counter, "tool_executed",
                               result_str[:500],
-                              {"tool_name": tool_model.name, "tool_call_id": tc.id})
+                              {"tool_name": tc_name, "tool_call_id": tc.id})
                 except Exception as exc:
                     tc.status = "failed"
                     tc.error = str(exc)
@@ -199,14 +219,18 @@ def _run_with_tools_anthropic(client, model, system, case_text, tools, db, run, 
                     result_str = "Error: {}".format(exc)
                     _add_step(db, run.id, step_counter, "tool_failed",
                               str(exc)[:500],
-                              {"tool_name": tool_model.name, "tool_call_id": tc.id, "error": str(exc)})
-                tool_results.append({"type": "tool_result", "tool_use_id": block.id, "content": result_str})
+                              {"tool_name": tc_name, "tool_call_id": tc.id, "error": str(exc)})
+                tool_result_messages.append({
+                    "role": "tool",
+                    "tool_call_id": tc_id,
+                    "content": result_str,
+                })
 
         db.flush()
         if needs_approval:
             return final_text or "Awaiting approval for tool actions.", total_in, total_out, True
 
-        messages.append({"role": "user", "content": tool_results})
+        messages.extend(tool_result_messages)
 
     return final_text, total_in, total_out, False
 
@@ -237,60 +261,42 @@ def execute_run(run_id: str, workspace_id: Optional[str] = None) -> None:
             return
 
         try:
-            from .llm_client import PROVIDERS
+            from .llm_client import call_llm, PROVIDERS
             brain_content = _assemble_brain(run.brain_id, db)
             if not brain_content.strip():
                 raise ValueError("This brain has no content yet. Complete the interview first.")
 
             system = RUN_SYSTEM_PROMPT.format(brain=brain_content)
             provider = user.llm_provider or "anthropic"
-            model = PROVIDERS.get(provider, PROVIDERS["anthropic"])["default_model"]
+            model = PROVIDERS.get(provider, PROVIDERS["anthropic"])["litellm_model"]
             step_counter = [0]
 
-            # Load any tools attached to this brain
             brain_tools = [
                 bt.tool for bt in db.query(BrainTool).filter_by(brain_id=run.brain_id).all()
                 if bt.tool.is_active
             ]
 
-            if provider == "anthropic":
-                import anthropic
-                from .crypto import decrypt_key
-                api_key = decrypt_key(user.encrypted_anthropic_key).decode()
-                client = anthropic.Anthropic(api_key=api_key)
-
-                if brain_tools:
-                    decision, tokens_in, tokens_out, awaiting = _run_with_tools_anthropic(
-                        client, model, system, run.case_text, brain_tools, db, run, ws_id, step_counter
-                    )
-                    run.tokens_in = tokens_in
-                    run.tokens_out = tokens_out
-                    if awaiting:
-                        run.decision_text = decision
-                        run.status = "awaiting_approval"
-                        run.completed_at = datetime.utcnow()
-                        sse.publish(ws_id, {"type": "run.awaiting_approval", "run_id": run_id})
-                        return
-                else:
-                    resp = client.messages.create(
-                        model=model,
-                        max_tokens=2048,
-                        system=system,
-                        messages=[{"role": "user", "content": "CASE:\n\n{}".format(run.case_text)}],
-                    )
-                    decision = resp.content[0].text
-                    run.tokens_in = resp.usage.input_tokens
-                    run.tokens_out = resp.usage.output_tokens
-                    _add_step(db, run.id, step_counter, "thinking", decision)
+            if brain_tools:
+                decision, tokens_in, tokens_out, awaiting = _run_with_tools(
+                    db, user, system, run.case_text, brain_tools, run, ws_id, step_counter
+                )
+                run.tokens_in = tokens_in
+                run.tokens_out = tokens_out
+                if awaiting:
+                    run.decision_text = decision
+                    run.status = "awaiting_approval"
+                    run.completed_at = datetime.utcnow()
+                    sse.publish(ws_id, {"type": "run.awaiting_approval", "run_id": run_id})
+                    return
             else:
-                from .llm_client import call_llm
-                decision = call_llm(
-                    user, system,
+                result = call_llm(
+                    db, user, system,
                     [{"role": "user", "content": "CASE:\n\n{}".format(run.case_text)}],
                     max_tokens=2048,
                 )
-                run.tokens_in = 0
-                run.tokens_out = 0
+                decision = result["content"]
+                run.tokens_in = result["usage"]["prompt_tokens"]
+                run.tokens_out = result["usage"]["completion_tokens"]
                 _add_step(db, run.id, step_counter, "thinking", decision)
 
             _add_step(db, run.id, step_counter, "final_decision", decision)
@@ -412,11 +418,11 @@ def resume_run(run_id: str) -> None:
             db.flush()
 
             user = db.query(User).filter_by(id=run.user_id).first()
-            from .llm_client import PROVIDERS
+            from .llm_client import call_llm, PROVIDERS
             brain_content = _assemble_brain(run.brain_id, db)
             system = RUN_SYSTEM_PROMPT.format(brain=brain_content)
             provider = user.llm_provider or "anthropic"
-            model = PROVIDERS.get(provider, PROVIDERS["anthropic"])["default_model"]
+            model = PROVIDERS.get(provider, PROVIDERS["anthropic"])["litellm_model"]
 
             resume_prompt = (
                 "CASE:\n\n{case}\n\n"
@@ -426,27 +432,14 @@ def resume_run(run_id: str) -> None:
                 "Please provide your complete decision, taking these outcomes into account."
             ).format(case=run.case_text, outcomes="\n".join(outcomes))
 
-            if provider == "anthropic":
-                import anthropic
-                from .crypto import decrypt_key
-                api_key = decrypt_key(user.encrypted_anthropic_key).decode()
-                client = anthropic.Anthropic(api_key=api_key)
-                resp = client.messages.create(
-                    model=model,
-                    max_tokens=2048,
-                    system=system,
-                    messages=[{"role": "user", "content": resume_prompt}],
-                )
-                decision = resp.content[0].text
-                run.tokens_in = (run.tokens_in or 0) + resp.usage.input_tokens
-                run.tokens_out = (run.tokens_out or 0) + resp.usage.output_tokens
-            else:
-                from .llm_client import call_llm
-                decision = call_llm(
-                    user, system,
-                    [{"role": "user", "content": resume_prompt}],
-                    max_tokens=2048,
-                )
+            result = call_llm(
+                db, user, system,
+                [{"role": "user", "content": resume_prompt}],
+                max_tokens=2048,
+            )
+            decision = result["content"]
+            run.tokens_in = (run.tokens_in or 0) + result["usage"]["prompt_tokens"]
+            run.tokens_out = (run.tokens_out or 0) + result["usage"]["completion_tokens"]
 
             _add_step(db, run.id, step_counter, "final_decision", decision)
             run.decision_text = decision
@@ -508,7 +501,7 @@ def check_scheduled_triggers() -> None:
 
                 brain = db.query(Brain).filter_by(id=trigger.brain_id).first()
                 owner = db.query(User).filter_by(id=brain.owner_id).first() if brain else None
-                if not brain or not owner or not owner.encrypted_anthropic_key:
+                if not brain or not owner:
                     continue
 
                 case_text = "Scheduled trigger: {} (fired at {})".format(
@@ -547,7 +540,16 @@ def run_maintainer_for_brain(brain_id: str) -> None:
             return
 
         owner = db.query(User).filter_by(id=brain.owner_id).first()
-        if not owner or not owner.encrypted_anthropic_key:
+        if not owner:
+            return
+
+        from .models import UserLLMCredential
+        provider = owner.llm_provider or "anthropic"
+        has_key = (
+            db.query(UserLLMCredential).filter_by(user_id=owner.id, provider=provider).count() > 0
+            or owner.encrypted_anthropic_key is not None
+        )
+        if not has_key:
             return
 
         now = datetime.utcnow()
@@ -647,19 +649,10 @@ def run_maintainer_for_brain(brain_id: str) -> None:
 
         # Generate proposed diffs via LLM
         brain_content = _assemble_brain(brain_id, db)
-        try:
-            from .llm_client import PROVIDERS
-            from .crypto import decrypt_key
-            import anthropic as _anthropic
-            api_key = decrypt_key(owner.encrypted_anthropic_key).decode()
-            client = _anthropic.Anthropic(api_key=api_key)
-            provider = owner.llm_provider or "anthropic"
-            model = PROVIDERS.get(provider, PROVIDERS["anthropic"])["default_model"]
-        except Exception:
-            return
 
         for f in new_findings:
             try:
+                from .llm_client import call_llm
                 prompt = (
                     "You are a brain maintainer. Given the brain content below and a detected pattern, "
                     "propose a specific, concrete improvement.\n\n"
@@ -675,12 +668,12 @@ def run_maintainer_for_brain(brain_id: str) -> None:
                     target_file=f["target_file"],
                 )
 
-                resp = client.messages.create(
-                    model=model,
+                result = call_llm(
+                    db, owner, "",
+                    [{"role": "user", "content": prompt}],
                     max_tokens=512,
-                    messages=[{"role": "user", "content": prompt}],
                 )
-                proposed_diff = resp.content[0].text.strip()
+                proposed_diff = result["content"].strip()
             except Exception:
                 proposed_diff = "APPEND TO {}:\n\n<!-- Maintainer: review finding: {} -->".format(
                     f["target_file"], f["finding"][:200]

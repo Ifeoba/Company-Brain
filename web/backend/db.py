@@ -94,10 +94,36 @@ def _backfill_workspaces(eng) -> None:
         db.close()
 
 
+def _backfill_llm_credentials(eng) -> None:
+    """Copy encrypted_anthropic_key → UserLLMCredential for existing users. Idempotent."""
+    db = SessionLocal()
+    try:
+        from .models import User, UserLLMCredential
+        for user in db.query(User).filter(User.encrypted_anthropic_key.isnot(None)).all():
+            provider = user.llm_provider or "anthropic"
+            exists = db.query(UserLLMCredential).filter_by(
+                user_id=user.id, provider=provider
+            ).first()
+            if not exists:
+                db.add(UserLLMCredential(
+                    user_id=user.id,
+                    provider=provider,
+                    encrypted_api_key=user.encrypted_anthropic_key,
+                    is_active=True,
+                ))
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+
 def init_db() -> None:
     Base.metadata.create_all(bind=engine)
     _migrate(engine)
     _backfill_workspaces(engine)
+    _backfill_llm_credentials(engine)
 
 
 def get_db():

@@ -4,7 +4,7 @@ import { api, apiBlob } from "./client";
 import type {
   AuditLogEntry, AuditPageOut, BrainActivityOut, BrainAnalyticsOut, BrainDetail, BrainRelationship, BrainStatsOut, BrainSummary, BrainUpdate, BrainUpdateLink,
   BuiltinTool, Collaborator, EscalationOut, ExpertQuestion, FileContent, FileSummary, InterviewState,
-  MaintainerSuggestionOut, ProviderInfo, PublicBrainUpdate, PublicQuestion, ReadinessOut, RelationshipSuggestion,
+  LLMCredential, MaintainerSuggestionOut, ProviderInfo, PublicBrainUpdate, PublicQuestion, ReadinessOut, RelationshipSuggestion,
   RunListItem, RunOut, RunTraceOut, SemanticReviewOut, ToolCallOut, ToolOut, TriggerOut, User, VaultSecretSummary,
   WorkspaceDashboardOut, WorkspaceInsightsOut, WorkspaceNode,
 } from "../types";
@@ -52,6 +52,63 @@ export function useDeleteApiKey() {
   return useMutation({
     mutationFn: () => api("/api/me/api-key", { method: "DELETE" }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }),
+  });
+}
+
+export function useLLMCredentials() {
+  return useQuery<LLMCredential[]>({
+    queryKey: ["llm-credentials"],
+    queryFn: () => api("/api/me/llm-credentials"),
+    staleTime: 30_000,
+  });
+}
+
+export function useSaveLLMCredential() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ provider, api_key, label = "" }: { provider: string; api_key: string; label?: string }) =>
+      api("/api/me/llm-credentials", {
+        method: "POST",
+        body: JSON.stringify({ provider, api_key, label }),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["llm-credentials"] });
+      qc.invalidateQueries({ queryKey: ["me"] });
+    },
+  });
+}
+
+export function useDeleteLLMCredential() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (provider: string) =>
+      api(`/api/me/llm-credentials/${provider}`, { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["llm-credentials"] });
+      qc.invalidateQueries({ queryKey: ["me"] });
+    },
+  });
+}
+
+export function useTestLLMCredential() {
+  return useMutation({
+    mutationFn: ({ provider, api_key }: { provider: string; api_key?: string }) =>
+      api(`/api/me/llm-credentials/${provider}/test`, {
+        method: "POST",
+        body: JSON.stringify({ api_key: api_key || null }),
+      }),
+  });
+}
+
+export function useActivateLLMCredential() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (provider: string) =>
+      api(`/api/me/llm-credentials/${provider}/activate`, { method: "POST" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["llm-credentials"] });
+      qc.invalidateQueries({ queryKey: ["me"] });
+    },
   });
 }
 

@@ -162,6 +162,7 @@ def discover_relationships(user: User = Depends(current_user), db: Session = Dep
     brains_text = "\n\n---\n\n".join(sections)
 
     raw = call_llm(
+        db,
         user,
         (
             "You analyse knowledge-base documents to find relationships between systems and services. "
@@ -179,7 +180,7 @@ def discover_relationships(user: User = Depends(current_user), db: Session = Dep
             ),
         }],
         max_tokens=1024,
-    )
+    )["content"]
     raw = raw.strip()
     match = re.search(r"\[.*\]", raw, re.DOTALL)
     if not match:

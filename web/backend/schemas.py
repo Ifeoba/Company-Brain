@@ -32,6 +32,27 @@ class ProviderInfo(BaseModel):
     key_url: str
 
 
+class LLMCredentialOut(BaseModel):
+    provider: str
+    label: str
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class SaveLLMCredentialRequest(BaseModel):
+    provider: str
+    api_key: str
+    label: str = ""
+
+
+class TestCredentialRequest(BaseModel):
+    api_key: Optional[str] = None
+
+
 # ── Brains ────────────────────────────────────────────────────────────────────
 
 class BrainCreate(BaseModel):

@@ -413,6 +413,7 @@
 .provider-card.selected { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--bg-1)); }
 .provider-name { font-size: 13px; font-weight: 500; color: var(--text); }
 .provider-badge { font-size: 10px; font-weight: 600; color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, var(--bg-2)); padding: 2px 6px; border-radius: 4px; flex-shrink: 0; }
+.active-badge { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--bg-2)); }
 
 /* ============================================================
    VALIDATION DRAWER

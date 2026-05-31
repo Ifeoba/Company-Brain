@@ -194,11 +194,12 @@ def semantic_review(slug: str, user: User = Depends(current_user), db: Session =
         raise HTTPException(status_code=400, detail="No content to review yet. Complete the interview first.")
 
     raw = call_llm(
+        db,
         user,
         _REVIEW_SYSTEM,
         [{"role": "user", "content": f"Brain: {brain.name}\n\n{sections}"}],
         max_tokens=1500,
-    )
+    )["content"]
 
     match = __import__("re").search(r"\{.*\}", raw, __import__("re").DOTALL)
     if not match:
