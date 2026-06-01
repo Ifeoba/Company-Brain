@@ -652,8 +652,8 @@
 .run-trace-link:hover { color: var(--accent); }
 
 /* ── Run trace page ───────────────────────────────────────── */
-.trace-page { display: flex; flex-direction: column; min-height: 100%; background: var(--bg); }
-.trace-content { max-width: 760px; margin: 0 auto; padding: 24px 24px 60px; width: 100%; }
+.trace-page { display: flex; flex-direction: column; height: 100%; background: var(--bg); overflow: hidden; }
+.trace-content { flex: 1; overflow-y: auto; max-width: 760px; margin: 0 auto; padding: 24px 24px 60px; width: 100%; }
 
 .trace-run-header { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin-bottom: 24px; }
 .trace-run-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
