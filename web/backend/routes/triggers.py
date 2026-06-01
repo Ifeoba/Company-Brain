@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from ..auth import current_user
 from ..config import settings
 from ..db import get_db
+from ..llm_client import user_has_active_llm_credential
 from ..models import Brain, Run, Trigger, User
 from ..schemas import TriggerCreate
 
@@ -271,7 +272,7 @@ def _fire_trigger(
         raise HTTPException(status_code=500, detail="Brain not found")
 
     owner = db.query(User).filter_by(id=brain.owner_id).first()
-    if not owner or not owner.encrypted_anthropic_key:
+    if not owner or not user_has_active_llm_credential(db, owner):
         raise HTTPException(status_code=400, detail="Brain owner has no API key configured")
 
     # Rate limit: max 10 inbound runs per trigger per minute

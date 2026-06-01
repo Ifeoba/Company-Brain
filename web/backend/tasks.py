@@ -13,6 +13,7 @@ from typing import Optional
 
 from .celery_app import celery_app
 from .db import session_scope
+from .llm_client import user_has_active_llm_credential
 from . import sse
 
 
@@ -543,13 +544,7 @@ def run_maintainer_for_brain(brain_id: str) -> None:
         if not owner:
             return
 
-        from .models import UserLLMCredential
-        provider = owner.llm_provider or "anthropic"
-        has_key = (
-            db.query(UserLLMCredential).filter_by(user_id=owner.id, provider=provider).count() > 0
-            or owner.encrypted_anthropic_key is not None
-        )
-        if not has_key:
+        if not user_has_active_llm_credential(db, owner):
             return
 
         now = datetime.utcnow()

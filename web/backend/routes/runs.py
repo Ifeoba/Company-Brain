@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from ..auth import current_user
 from ..db import get_db
+from ..llm_client import user_has_active_llm_credential
 from ..models import Brain, BrainFile, GeneratedEval, Review, Run, Tool, ToolCall, User
 from ..schemas import (
     CreateReviewRequest, CreateRunRequest, EvalSyncOut,
@@ -109,7 +110,7 @@ def create_run(
 ):
     brain = _get_brain(db, slug, user)
 
-    if not user.encrypted_anthropic_key:
+    if not user_has_active_llm_credential(db, user):
         raise HTTPException(status_code=400, detail="No API key configured. Add one in Settings.")
 
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)

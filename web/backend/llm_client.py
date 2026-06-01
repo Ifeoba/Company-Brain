@@ -39,6 +39,14 @@ PROVIDERS: dict[str, dict[str, Any]] = {
 }
 
 
+def user_has_active_llm_credential(db: "Session", user: "User") -> bool:
+    """Return True if the user has any usable LLM credential (legacy or new table)."""
+    if user.encrypted_anthropic_key:
+        return True
+    from .models import UserLLMCredential
+    return db.query(UserLLMCredential).filter_by(user_id=user.id, is_active=True).first() is not None
+
+
 def _get_api_key(db: "Session", user: "User", provider: str) -> Optional[str]:
     """Return decrypted API key for the given provider, or None."""
     from .models import UserLLMCredential
